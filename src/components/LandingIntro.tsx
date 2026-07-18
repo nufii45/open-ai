@@ -3,38 +3,26 @@
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useEffect } from 'react';
 
-const INTRO_SEEN_KEY = 'healthbridge:intro-seen';
+const INTRO_DURATION_MS = 4_200;
 
 export function LandingIntro({ onComplete }: { onComplete: () => void }) {
   useEffect(() => {
-    let hasSeenIntro = false;
     let reducedMotion = false;
 
     try {
-      hasSeenIntro = window.sessionStorage.getItem(INTRO_SEEN_KEY) === 'true';
       reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     } catch {
       // The intro remains usable when storage or media queries are unavailable.
     }
 
     const timer = window.setTimeout(() => {
-      try {
-        window.sessionStorage.setItem(INTRO_SEEN_KEY, 'true');
-      } catch {
-        // The next visit may replay the intro; the app remains functional.
-      }
       onComplete();
-    }, hasSeenIntro || reducedMotion ? 0 : 2400);
+    }, reducedMotion ? 0 : INTRO_DURATION_MS);
 
     return () => window.clearTimeout(timer);
   }, [onComplete]);
 
   function skip() {
-    try {
-      window.sessionStorage.setItem(INTRO_SEEN_KEY, 'true');
-    } catch {
-      // No persistence needed to continue.
-    }
     onComplete();
   }
 
@@ -55,6 +43,9 @@ export function LandingIntro({ onComplete }: { onComplete: () => void }) {
         <button type="button" onClick={skip} className="hb-intro-copy mt-9 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">
           Enter HealthBridge <ArrowRight className="size-4" aria-hidden="true" />
         </button>
+        <div className="mt-10 h-1 w-40 overflow-hidden rounded-full bg-white/15" aria-hidden="true">
+          <div className="hb-intro-progress h-full rounded-full bg-teal-200" />
+        </div>
       </div>
     </main>
   );
