@@ -16,7 +16,7 @@ export function SavedMedicines({ saved, onRemove }: SavedMedicinesProps) {
   const total = saved.reduce((sum, m) => sum + m.savings, 0);
 
   return (
-    <section aria-labelledby="saved-heading" className="mt-8 lg:mt-0 lg:rounded-xl lg:border lg:border-slate-200 lg:bg-white lg:p-5 lg:shadow-sm">
+    <section aria-labelledby="saved-heading" className="mt-8 lg:sticky lg:top-6 lg:mt-0 lg:rounded-xl lg:border lg:border-slate-200 lg:bg-white lg:p-5 lg:shadow-sm">
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h2 id="saved-heading" className="text-lg font-semibold text-slate-900">
           My medicines
