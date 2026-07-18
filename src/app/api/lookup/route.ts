@@ -52,6 +52,8 @@ function parseDrug(raw: unknown, query: string): Drug | null {
     dosage,
     category,
     priceSource: "OpenAI estimate",
+    // OpenAI estimates are never hand-checked prices — always unverified.
+    priceVerified: false,
   };
 }
 
