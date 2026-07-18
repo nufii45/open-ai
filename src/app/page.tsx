@@ -3,6 +3,7 @@
 import { ArrowLeft, ShieldCheck, Sparkles, WalletCards } from "lucide-react";
 import { useCallback, useState } from "react";
 
+import { DisclaimerModal } from "@/components/DisclaimerModal";
 import { LandingIntro } from "@/components/LandingIntro";
 import { ResultCard } from "@/components/ResultCard";
 import { SavedMedicines } from "@/components/SavedMedicines";
@@ -74,6 +75,8 @@ export default function Home() {
   }
 
   return (
+    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:py-12">
+      <DisclaimerModal />
     <main className="min-h-screen bg-[#f5f5f7] px-4 py-5 text-slate-950 sm:px-6 lg:py-8">
       <div className="mx-auto w-full max-w-6xl">
         <header className="mb-8 flex items-center justify-between">
