@@ -35,6 +35,7 @@ export type DrugComparison = {
  * price, or confirmed proximity — every entry is labelled illustrative.
  */
 export type SamplePharmacy = {
+  id: string;
   name: string;
   branch: string;
   /** Google Maps search URL — opens directions without geolocation. */

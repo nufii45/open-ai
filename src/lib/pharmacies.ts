@@ -14,6 +14,7 @@ function mapsSearch(query: string): string {
 
 export const SAMPLE_PHARMACIES: readonly SamplePharmacy[] = [
   {
+    id: 'mercury-drug-katipunan',
     name: 'Mercury Drug',
     branch: 'Katipunan Ave, Loyola Heights',
     directionsUrl: mapsSearch('Mercury Drug Katipunan Avenue Loyola Heights Quezon City'),
@@ -21,6 +22,7 @@ export const SAMPLE_PHARMACIES: readonly SamplePharmacy[] = [
     note: 'Sample branch — call ahead to confirm stock and price.',
   },
   {
+    id: 'generics-pharmacy-katipunan',
     name: 'The Generics Pharmacy',
     branch: 'Katipunan Ave, near Ateneo',
     directionsUrl: mapsSearch('The Generics Pharmacy Katipunan Avenue Quezon City'),
@@ -28,6 +30,7 @@ export const SAMPLE_PHARMACIES: readonly SamplePharmacy[] = [
     note: 'Sample branch — call ahead to confirm stock and price.',
   },
   {
+    id: 'watsons-up-town-center',
     name: 'Watsons',
     branch: 'UP Town Center, Katipunan',
     directionsUrl: mapsSearch('Watsons UP Town Center Katipunan Quezon City'),
@@ -35,6 +38,7 @@ export const SAMPLE_PHARMACIES: readonly SamplePharmacy[] = [
     note: 'Sample branch — call ahead to confirm stock and price.',
   },
   {
+    id: 'southstar-drug-katipunan',
     name: 'Southstar Drug',
     branch: 'Katipunan Ave, Quezon City',
     directionsUrl: mapsSearch('Southstar Drug Katipunan Avenue Quezon City'),
@@ -45,3 +49,17 @@ export const SAMPLE_PHARMACIES: readonly SamplePharmacy[] = [
 
 /** The three sample branches shown beside a comparison. */
 export const NEAREST_SAMPLE_PHARMACIES: readonly SamplePharmacy[] = SAMPLE_PHARMACIES.slice(0, 3);
+
+export type RouteMode = 'drive' | 'walk';
+
+export type PharmacyRouteRanking = {
+  pharmacyId: string;
+  distanceMeters: number;
+  durationSeconds: number;
+};
+
+export type PharmacyMapLocation = {
+  pharmacyId: string;
+  latitude: number;
+  longitude: number;
+};

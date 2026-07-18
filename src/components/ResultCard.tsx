@@ -3,7 +3,7 @@
 import { Check, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PharmacyList } from '@/components/PharmacyList';
+import { PharmacyLocator } from '@/components/PharmacyLocator';
 import { NEAREST_SAMPLE_PHARMACIES } from '@/lib/pharmacies';
 import { formatPercent, formatPHP } from '@/lib/savings';
 import type { VerifiedLookup } from '@/lib/types';
@@ -146,8 +146,7 @@ export function ResultCard({ result, isSaved, onSave }: ResultCardProps) {
         )}
       </Button>
 
-      {/* Sample pharmacies */}
-      <PharmacyList pharmacies={NEAREST_SAMPLE_PHARMACIES} />
+      <PharmacyLocator pharmacies={NEAREST_SAMPLE_PHARMACIES} />
     </article>
   );
 }

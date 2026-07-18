@@ -34,3 +34,13 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Illustrative pharmacy routes
+
+The location map uses Geoapify for server-side geocoding and road-route estimates. Add a server-only key before running the route experience:
+
+```bash
+GEOAPIFY_API_KEY=your_key_here
+```
+
+The browser asks for location only after the user selects **Use my location**. Pharmacy pins, route order, and travel estimates are illustrative and do not indicate live stock, price, or availability.
