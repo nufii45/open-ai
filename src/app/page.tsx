@@ -1,8 +1,9 @@
 "use client";
 
-import { ShieldCheck, Sparkles, WalletCards } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, ShieldCheck, Sparkles, WalletCards } from "lucide-react";
+import { useCallback, useState } from "react";
 
+import { LandingIntro } from "@/components/LandingIntro";
 import { ResultCard } from "@/components/ResultCard";
 import { SavedMedicines } from "@/components/SavedMedicines";
 import { SearchForm } from "@/components/SearchForm";
@@ -24,6 +25,7 @@ export default function Home() {
   const [phase, setPhase] = useState<SearchPhase>("idle");
   const [outcome, setOutcome] = useState<LookupOutcome | null>(null);
   const [showEmptyError, setShowEmptyError] = useState(false);
+  const [introComplete, setIntroComplete] = useState(false);
   const { saved, save, remove, isSaved } = useSavedMedicines();
 
   async function search(rawQuery: string) {
@@ -58,6 +60,18 @@ export default function Home() {
 
   const verifiedResult = outcome?.status === "verified" ? outcome : null;
   const isLanding = phase === "idle" && !outcome;
+  const finishIntro = useCallback(() => setIntroComplete(true), []);
+
+  function startNewComparison() {
+    setQuery("");
+    setOutcome(null);
+    setShowEmptyError(false);
+    setPhase("idle");
+  }
+
+  if (!introComplete) {
+    return <LandingIntro onComplete={finishIntro} />;
+  }
 
   return (
     <main className="min-h-screen bg-[#f5f5f7] px-4 py-5 text-slate-950 sm:px-6 lg:py-8">
@@ -92,7 +106,13 @@ export default function Home() {
         ) : (
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
             <section className="space-y-6">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><SearchForm query={query} onQueryChange={setQuery} onSearch={search} isLoading={phase === "loading"} showEmptyError={showEmptyError} compact /></div>
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div><p className="text-sm font-semibold text-slate-950">New comparison</p><p className="text-xs text-slate-500">Search another verified medicine.</p></div>
+                  <button type="button" onClick={startNewComparison} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-slate-200 px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"><ArrowLeft className="size-4" aria-hidden="true" /> Home</button>
+                </div>
+                <SearchForm query={query} onQueryChange={setQuery} onSearch={search} isLoading={phase === "loading"} showEmptyError={showEmptyError} compact />
+              </div>
               {phase === "loading" ? <LoadingCard /> : null}
               {phase === "not_verified" ? <NoMatchCard query={outcome?.status === "not_verified" ? outcome.query : query} /> : null}
               {phase === "error" ? <ErrorCard onRetry={() => void search(query)} /> : null}

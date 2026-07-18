@@ -1,0 +1,61 @@
+'use client';
+
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { useEffect } from 'react';
+
+const INTRO_SEEN_KEY = 'healthbridge:intro-seen';
+
+export function LandingIntro({ onComplete }: { onComplete: () => void }) {
+  useEffect(() => {
+    let hasSeenIntro = false;
+    let reducedMotion = false;
+
+    try {
+      hasSeenIntro = window.sessionStorage.getItem(INTRO_SEEN_KEY) === 'true';
+      reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      // The intro remains usable when storage or media queries are unavailable.
+    }
+
+    const timer = window.setTimeout(() => {
+      try {
+        window.sessionStorage.setItem(INTRO_SEEN_KEY, 'true');
+      } catch {
+        // The next visit may replay the intro; the app remains functional.
+      }
+      onComplete();
+    }, hasSeenIntro || reducedMotion ? 0 : 2400);
+
+    return () => window.clearTimeout(timer);
+  }, [onComplete]);
+
+  function skip() {
+    try {
+      window.sessionStorage.setItem(INTRO_SEEN_KEY, 'true');
+    } catch {
+      // No persistence needed to continue.
+    }
+    onComplete();
+  }
+
+  return (
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-6 text-white">
+      <div className="hb-orbit hb-orbit-one" aria-hidden="true" />
+      <div className="hb-orbit hb-orbit-two" aria-hidden="true" />
+      <button type="button" onClick={skip} className="absolute right-6 top-6 z-10 rounded-full border border-white/15 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">
+        Skip intro
+      </button>
+      <div className="relative z-10 flex max-w-xl flex-col items-center text-center">
+        <div className="hb-intro-logo flex size-20 items-center justify-center rounded-[28px] bg-white text-3xl font-black text-slate-950 shadow-2xl shadow-teal-300/20">H</div>
+        <div className="hb-intro-copy mt-7">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-teal-300/30 bg-teal-300/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-teal-100"><Sparkles className="size-3.5" aria-hidden="true" /> HEALTHBRIDGE</div>
+          <h1 className="text-5xl font-bold leading-[0.95] tracking-[-0.06em] sm:text-6xl">A clearer choice starts here.</h1>
+          <p className="mt-5 text-base leading-7 text-slate-300 sm:text-lg">Find a verified generic comparison, see the difference, and keep the saving that matters.</p>
+        </div>
+        <button type="button" onClick={skip} className="hb-intro-copy mt-9 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">
+          Enter HealthBridge <ArrowRight className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+    </main>
+  );
+}
