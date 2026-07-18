@@ -19,6 +19,11 @@
    (**drugstores only, no clinics**) with a fixed origin + distance helper that
    surfaces the 3 nearest. If the team's ready-made file exists, drop it in as-is.
 
+## Note on live data / openFDA
+Phase 2 is **local files only** — this is the offline hero path. Live drug-info
+enrichment (openFDA) is a separate goal: run `/goal openfda` after the core flow
+works. Do NOT add live API calls or datasets to the price/generic data here.
+
 ## Guardrails in play
 - **Never scrape or call a price API** (Watsons/Mercury/TGP/DOH). Static local file only.
 - **Do NOT fabricate prices as authoritative** — placeholders must be visibly marked.
