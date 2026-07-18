@@ -53,7 +53,8 @@ function isSavedMedicine(value: unknown): value is DrugResult {
     typeof drug.brandedPrice === "number" &&
     typeof drug.genericPrice === "number" &&
     typeof drug.savings === "number" &&
-    typeof drug.estimated === "boolean"
+    typeof drug.estimated === "boolean" &&
+    (drug.priceStatus === undefined || drug.priceStatus === "unverified" || drug.priceStatus === "verified")
   );
 }
 
@@ -159,7 +160,8 @@ export default function Home() {
     setDrugInfo(null);
 
     try {
-      const response = await fetch(`/api/drug-info?generic=${encodeURIComponent(result.generic)}`);
+      const genericName = result.openFdaGenericName ?? result.generic;
+      const response = await fetch(`/api/drug-info?generic=${encodeURIComponent(genericName)}`);
       if (!response.ok) throw new Error("FDA label request failed");
       const data: unknown = await response.json();
       const info = data as DrugLabelInfo;
@@ -260,7 +262,14 @@ export default function Home() {
                     <p className="mt-1 text-xl font-bold text-teal-800">{pesos(result.genericPrice)}</p>
                   </div>
                 </div>
-                <p className="text-sm text-slate-500">Price via {result.priceSource}</p>
+                <div className="text-sm text-slate-500">
+                  <p>Price via {result.priceSource}</p>
+                  {result.priceStatus === "verified" && result.priceCheckedAt ? (
+                    <p>Checked {result.priceCheckedAt}</p>
+                  ) : (
+                    <p className="mt-1 text-amber-700">Demo pricing — verify before relying on it.</p>
+                  )}
+                </div>
                 <Button className="w-full" onClick={saveCurrentMedicine} type="button" variant={savedResult ? "secondary" : "default"}>
                   {savedResult ? <Check aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
                   {savedResult ? "Saved to my list" : "Save to my list"}
