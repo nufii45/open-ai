@@ -1,65 +1,272 @@
-import Image from "next/image";
+"use client";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Bookmark, Check, Search, X } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { findDrug, type Drug } from "@/data/drugs";
+
+const SAVED_MEDICINES_KEY = "healthbridge:savedMeds";
+
+type DrugResult = Drug & {
+  savings: number;
+  estimated: boolean;
+};
+
+function toResult(drug: Drug, estimated = false): DrugResult {
+  return {
+    ...drug,
+    savings: drug.brandedPrice - drug.genericPrice,
+    estimated,
+  };
+}
+
+function medicineId(drug: Pick<Drug, "brand" | "generic" | "dosage">): string {
+  return `${drug.brand}|${drug.generic}|${drug.dosage}`.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function isSavedMedicine(value: unknown): value is DrugResult {
+  if (!value || typeof value !== "object") return false;
+  const drug = value as Record<string, unknown>;
+  return (
+    typeof drug.brand === "string" &&
+    typeof drug.generic === "string" &&
+    typeof drug.dosage === "string" &&
+    typeof drug.category === "string" &&
+    typeof drug.priceSource === "string" &&
+    typeof drug.brandedPrice === "number" &&
+    typeof drug.genericPrice === "number" &&
+    typeof drug.savings === "number" &&
+    typeof drug.estimated === "boolean"
+  );
+}
+
+function pesos(value: number): string {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
 
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const [result, setResult] = useState<DrugResult | null>(null);
+  const [savedMedicines, setSavedMedicines] = useState<DrugResult[]>([]);
+  const [status, setStatus] = useState<"idle" | "loading" | "empty" | "error">("idle");
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(SAVED_MEDICINES_KEY);
+      if (!stored) return;
+      const parsed: unknown = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        // Intentional one-time hydration from browser-only storage.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSavedMedicines(parsed.filter(isSavedMedicine));
+      }
+    } catch {
+      // Storage can be disabled or contain malformed old data. Keep an in-memory list.
+    }
+  }, []);
+
+  const savedResult = useMemo(
+    () => (result ? savedMedicines.some((medicine) => medicineId(medicine) === medicineId(result)) : false),
+    [result, savedMedicines],
+  );
+
+  function writeSavedMedicines(next: DrugResult[]) {
+    try {
+      window.localStorage.setItem(SAVED_MEDICINES_KEY, JSON.stringify(next));
+    } catch {
+      // A full/private-mode store should never prevent the current in-memory session from working.
+    }
+  }
+
+  async function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
+
+    setStatus("loading");
+    setResult(null);
+
+    const localDrug = findDrug(trimmedQuery);
+    if (localDrug) {
+      setResult(toResult(localDrug));
+      setStatus("idle");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/lookup?q=${encodeURIComponent(trimmedQuery)}`);
+      if (response.status === 404) {
+        setStatus("empty");
+        return;
+      }
+      if (!response.ok) throw new Error("Lookup request failed");
+
+      const data: unknown = await response.json();
+      if (!isSavedMedicine(data)) throw new Error("Invalid lookup response");
+      setResult(data);
+      setStatus("idle");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  function saveCurrentMedicine() {
+    if (!result) return;
+    setSavedMedicines((previous) => {
+      if (previous.some((medicine) => medicineId(medicine) === medicineId(result))) return previous;
+      const next = [...previous, result];
+      writeSavedMedicines(next);
+      return next;
+    });
+  }
+
+  function removeMedicine(id: string) {
+    setSavedMedicines((previous) => {
+      const next = previous.filter((medicine) => medicineId(medicine) !== id);
+      writeSavedMedicines(next);
+      return next;
+    });
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-950 sm:px-6">
+      <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <section className="space-y-6">
+          <header className="space-y-3 pt-2">
+            <Badge className="bg-teal-100 text-teal-800 hover:bg-teal-100">HealthBridge</Badge>
+            <h1 className="max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
+              Find the generic. Keep the savings.
+            </h1>
+            <p className="max-w-xl text-base text-slate-600 sm:text-lg">
+              Search a branded medicine to compare it with its generic equivalent in seconds.
+            </p>
+          </header>
+
+          <form className="flex gap-2" onSubmit={handleSearch}>
+            <Input
+              aria-label="Search for a medicine"
+              className="h-12 bg-white text-base"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Try Biogesic, Lipitor, or paracetamol"
+              value={query}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <Button className="h-12 shrink-0" disabled={status === "loading"} type="submit">
+              <Search aria-hidden="true" />
+              <span className="hidden sm:inline">Search</span>
+            </Button>
+          </form>
+
+          {status === "loading" && (
+            <Card aria-live="polite">
+              <CardContent className="space-y-5 pt-6">
+                <Skeleton className="h-8 w-2/5" />
+                <Skeleton className="h-16 w-3/5" />
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          )}
+
+          {status === "empty" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>No medicine found</CardTitle>
+                <CardDescription>
+                  Try a brand or generic name, such as Biogesic or paracetamol.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+
+          {status === "error" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>We could not complete that lookup</CardTitle>
+                <CardDescription>Please check your connection and try again.</CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+
+          {result && (
+            <Card className="overflow-hidden border-teal-200 shadow-sm">
+              <CardHeader className="bg-teal-50/80">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardDescription className="font-medium text-teal-800">Potential savings per unit</CardDescription>
+                    <CardTitle className="mt-1 text-5xl font-black tracking-tight text-teal-700 sm:text-6xl">
+                      {pesos(result.savings)}
+                    </CardTitle>
+                  </div>
+                  {result.estimated && <Badge variant="secondary">Estimated</Badge>}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5 pt-6">
+                <div>
+                  <h2 className="text-2xl font-bold">{result.brand}</h2>
+                  <p className="text-slate-600">Generic: {result.generic} · {result.dosage}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border bg-slate-50 p-4">
+                    <p className="text-sm text-slate-600">Branded</p>
+                    <p className="mt-1 text-xl font-bold">{pesos(result.brandedPrice)}</p>
+                  </div>
+                  <div className="rounded-lg border border-teal-200 bg-teal-50 p-4">
+                    <p className="text-sm text-teal-800">Generic</p>
+                    <p className="mt-1 text-xl font-bold text-teal-800">{pesos(result.genericPrice)}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-500">Price via {result.priceSource}</p>
+                <Button className="w-full" onClick={saveCurrentMedicine} type="button" variant={savedResult ? "secondary" : "default"}>
+                  {savedResult ? <Check aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
+                  {savedResult ? "Saved to my list" : "Save to my list"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </section>
+
+        <aside>
+          <Card className="lg:sticky lg:top-6">
+            <CardHeader>
+              <CardTitle>My medicines</CardTitle>
+              <CardDescription>Your list is saved on this device.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {savedMedicines.length === 0 ? (
+                <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">No saved medicines yet.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {savedMedicines.map((medicine) => (
+                    <li className="flex items-start justify-between gap-3 rounded-lg border p-3" key={medicineId(medicine)}>
+                      <div>
+                        <p className="font-semibold">{medicine.brand}</p>
+                        <p className="text-sm text-slate-600">Save {pesos(medicine.savings)}</p>
+                      </div>
+                      <Button aria-label={`Remove ${medicine.brand}`} onClick={() => removeMedicine(medicineId(medicine))} size="icon" type="button" variant="ghost">
+                        <X aria-hidden="true" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
+    </main>
   );
 }
