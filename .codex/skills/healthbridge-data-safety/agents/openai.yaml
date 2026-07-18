@@ -1,0 +1,4 @@
+interface:
+  display_name: "HealthBridge Data Safety"
+  short_description: "Safe medicine and price guardrails"
+  default_prompt: "Use $healthbridge-data-safety to review this change for safe medicine and price behavior."
