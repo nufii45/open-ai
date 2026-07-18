@@ -48,6 +48,10 @@ export default function Home() {
     setPhase('loading');
     setResult(null);
 
+    // Let the button's non-blocking comparison state paint before a curated
+    // local lookup completes in the same event turn.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
     // 1) Local-first: curated hero searches resolve instantly, offline.
     const local = lookupLocal(q);
     if (local.status === 'verified') {

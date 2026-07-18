@@ -1,7 +1,7 @@
 'use client';
 
-import { Search } from 'lucide-react';
 import { type FormEvent, useRef } from 'react';
+import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { POPULAR_BRANDS } from '@/lib/drugs';
@@ -63,11 +63,20 @@ export function SearchForm({
           <Button
             type="submit"
             disabled={isLoading}
-            className="h-12 min-w-12 bg-teal-600 px-4 text-white shadow-sm transition-[background-color,transform] duration-200 ease-out hover:bg-teal-700 active:scale-[0.98] focus-visible:border-teal-600 focus-visible:ring-teal-600/30 motion-reduce:transition-none motion-reduce:transform-none"
+            className="h-12 min-w-28 bg-teal-600 px-4 text-white shadow-sm transition-[background-color,transform] duration-200 ease-out hover:bg-teal-700 active:scale-[0.98] focus-visible:border-teal-600 focus-visible:ring-teal-600/30 motion-reduce:transition-none motion-reduce:transform-none"
           >
-            <Search aria-hidden="true" className="size-4" />
-            <span className="hidden min-[360px]:inline">Compare</span>
-            <span className="min-[360px]:sr-only">Compare medicine</span>
+            {isLoading ? (
+              <Loader
+                variant="scramble"
+                text="COMPARING"
+                label="Comparing medicine"
+                size={34}
+                speed={0.9}
+                className="text-white"
+              />
+            ) : (
+              'Compare'
+            )}
           </Button>
         </div>
         {showEmptyError ? (
