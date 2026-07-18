@@ -15,6 +15,7 @@ export type SavedMedicine = {
   brand: string;
   generic: string;
   savings: number; // PHP, from the verified curated record only
+  isPurchased: boolean;
 };
 
 function parse(raw: string | null): SavedMedicine[] {
@@ -22,15 +23,29 @@ function parse(raw: string | null): SavedMedicine[] {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return EMPTY;
-    return parsed.filter(
-      (row): row is SavedMedicine =>
+    return parsed.flatMap((row): SavedMedicine[] => {
+      if (
         row &&
         typeof row.id === 'string' &&
         typeof row.brand === 'string' &&
         typeof row.generic === 'string' &&
         typeof row.savings === 'number' &&
-        Number.isFinite(row.savings),
-    );
+        Number.isFinite(row.savings)
+      ) {
+        // v1 saved rows did not include purchase status; retain them as
+        // unchecked rather than losing the person's saved comparisons.
+        return [
+          {
+            id: row.id,
+            brand: row.brand,
+            generic: row.generic,
+            savings: row.savings,
+            isPurchased: row.isPurchased === true,
+          },
+        ];
+      }
+      return [];
+    });
   } catch {
     return EMPTY;
   }
@@ -88,7 +103,11 @@ export function useSavedMedicines() {
     write(getSnapshot().filter((m) => m.id !== id));
   }, []);
 
+  const setPurchased = useCallback((id: string, isPurchased: boolean) => {
+    write(getSnapshot().map((medicine) => (medicine.id === id ? { ...medicine, isPurchased } : medicine)));
+  }, []);
+
   const isSaved = useCallback((id: string) => saved.some((m) => m.id === id), [saved]);
 
-  return { saved, save, remove, isSaved };
+  return { saved, save, remove, setPurchased, isSaved };
 }

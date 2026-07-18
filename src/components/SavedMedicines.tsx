@@ -1,18 +1,19 @@
 'use client';
 
-import { X } from 'lucide-react';
 import { formatPHP } from '@/lib/savings';
 import type { SavedMedicine } from '@/lib/useSavedMedicines';
+import { MedicinePurchaseChecklist } from '@/components/MedicinePurchaseChecklist';
 
 type SavedMedicinesProps = {
   saved: SavedMedicine[];
+  onPurchaseChange: (id: string, isPurchased: boolean) => void;
   onRemove: (id: string) => void;
 };
 
 // "My medicines" — the list a person builds up while comparing. Each row shows
 // the name and its verified savings, with a remove control. Empty state guides
 // the first save.
-export function SavedMedicines({ saved, onRemove }: SavedMedicinesProps) {
+export function SavedMedicines({ saved, onPurchaseChange, onRemove }: SavedMedicinesProps) {
   const total = saved.reduce((sum, m) => sum + m.savings, 0);
 
   return (
@@ -33,31 +34,16 @@ export function SavedMedicines({ saved, onRemove }: SavedMedicinesProps) {
           No saved medicines yet. Save a verified comparison to keep it here.
         </p>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {saved.map((medicine) => (
-            <li
-              key={medicine.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-slate-900">
-                  {medicine.brand} → {medicine.generic}
-                </p>
-                <p className="text-sm text-emerald-700 tabular-nums">
-                  Save {formatPHP(medicine.savings)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onRemove(medicine.id)}
-                aria-label={`Remove ${medicine.brand} from my medicines`}
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
-              >
-                <X aria-hidden="true" className="size-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="mb-2 text-xs leading-5 text-slate-600">
+            Mark a medicine as bought once you have purchased it. This does not replace advice from a pharmacist or prescriber.
+          </p>
+          <MedicinePurchaseChecklist
+            medicines={saved}
+            onPurchaseChange={onPurchaseChange}
+            onRemove={onRemove}
+          />
+        </>
       )}
     </section>
   );

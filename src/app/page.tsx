@@ -1,5 +1,15 @@
 "use client";
 
+import { useCallback, useState } from 'react';
+import { ResultCard } from '@/components/ResultCard';
+import { SavedMedicines } from '@/components/SavedMedicines';
+import { SearchForm } from '@/components/SearchForm';
+import { ErrorCard, LoadingCard, NoMatchCard } from '@/components/StateCards';
+import { BrandMark } from '@/components/BrandMark';
+import { lookupLocal, toVerifiedLookup } from '@/lib/lookup';
+import { isValidComparison } from '@/lib/savings';
+import type { DrugComparison, MatchSource, VerifiedLookup } from '@/lib/types';
+import { useSavedMedicines } from '@/lib/useSavedMedicines';
 import { ArrowLeft, ShieldCheck, Sparkles, WalletCards } from "lucide-react";
 import { useCallback, useState } from "react";
 
@@ -26,6 +36,8 @@ export default function Home() {
   const [phase, setPhase] = useState<SearchPhase>("idle");
   const [outcome, setOutcome] = useState<LookupOutcome | null>(null);
   const [showEmptyError, setShowEmptyError] = useState(false);
+
+  const { saved, save, remove, setPurchased, isSaved } = useSavedMedicines();
   const [introComplete, setIntroComplete] = useState(false);
   const { saved, save, remove, isSaved } = useSavedMedicines();
 
@@ -54,6 +66,28 @@ export default function Home() {
     }
   }
 
+  const handleSave = useCallback(() => {
+    if (!result) return;
+    save({
+      id: result.comparison.id,
+      brand: result.comparison.brand,
+      generic: result.comparison.generic,
+      savings: result.savings.savings,
+      isPurchased: false,
+    });
+  }, [result, save]);
+
+  return (
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-4 py-6 sm:py-10 lg:max-w-6xl lg:px-8 lg:py-12">
+      <header className="mb-9 lg:mb-12 lg:flex lg:items-end lg:justify-between lg:gap-8">
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-[10px] bg-teal-600 text-white shadow-sm">
+            <BrandMark />
+          </span>
+          <span className="text-base font-semibold tracking-tight text-slate-900">HealthBridge</span>
+        </div>
+        <p className="mt-1.5 text-sm text-slate-600">Clear, verified medicine price comparisons.</p>
+      </header>
   function saveComparison(result: VerifiedLookup) {
     const { comparison, savings } = result;
     save({ id: comparison.id, brand: comparison.brand, generic: comparison.generic, savings: savings.savings });
@@ -74,6 +108,9 @@ export default function Home() {
     return <LandingIntro onComplete={finishIntro} />;
   }
 
+        <aside className="lg:sticky lg:top-8">
+          <SavedMedicines saved={saved} onPurchaseChange={setPurchased} onRemove={remove} />
+        </aside>
   return (
     <>
       <DisclaimerModal />
