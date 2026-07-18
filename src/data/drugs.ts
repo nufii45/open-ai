@@ -30,11 +30,11 @@ const PLACEHOLDER = "Unverified demo price";
 export const drugs: Drug[] = [
   // --- Demo drugs: the 3 biggest savings gaps. The spread sells the app. ---
   // Atorvastatin: ~₱44 branded vs ~₱6 generic per tablet — the headline saving.
-  { brand: "Lipitor", generic: "atorvastatin", brandedPrice: 44.0 /* PLACEHOLDER */, genericPrice: 6.0 /* PLACEHOLDER */, dosage: "20mg tablet", category: "Cardiovascular", priceSource: PLACEHOLDER, priceVerified: false },
+  { brand: "Lipitor", generic: "atorvastatin", brandedPrice: 44.0 /* PLACEHOLDER */, genericPrice: 6.0 /* PLACEHOLDER */, dosage: "20mg tablet", category: "Cardiovascular", priceSource: PLACEHOLDER, priceStatus: "unverified" },
   // Amlodipine: a daily maintenance drug, so the per-tablet gap compounds.
-  { brand: "Norvasc", generic: "amlodipine", brandedPrice: 40.0 /* PLACEHOLDER */, genericPrice: 4.5 /* PLACEHOLDER */, dosage: "5mg tablet", category: "Cardiovascular", priceSource: PLACEHOLDER, priceVerified: false },
+  { brand: "Norvasc", generic: "amlodipine", brandedPrice: 40.0 /* PLACEHOLDER */, genericPrice: 4.5 /* PLACEHOLDER */, dosage: "5mg tablet", category: "Cardiovascular", priceSource: PLACEHOLDER, priceStatus: "unverified" },
   // Salbutamol inhaler: high branded price, wide generic gap.
-  { brand: "Ventolin", generic: "salbutamol", brandedPrice: 385.0 /* PLACEHOLDER */, genericPrice: 120.0 /* PLACEHOLDER */, dosage: "100mcg inhaler", category: "Respiratory", priceSource: PLACEHOLDER, priceVerified: false },
+  { brand: "Ventolin", generic: "salbutamol", brandedPrice: 385.0 /* PLACEHOLDER */, genericPrice: 120.0 /* PLACEHOLDER */, dosage: "100mcg inhaler", category: "Respiratory", priceSource: PLACEHOLDER, priceStatus: "unverified" },
 
   // --- Remaining seeded rows ---
   { brand: "Biogesic", generic: "paracetamol", openFdaGenericName: "acetaminophen", brandedPrice: 4.5 /* PLACEHOLDER */, genericPrice: 1.5 /* PLACEHOLDER */, dosage: "500mg tablet", category: "Analgesic", priceSource: PLACEHOLDER },
