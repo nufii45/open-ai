@@ -112,10 +112,15 @@ export default function Home() {
     setDrugInfo(null);
     setDrugInfoStatus("idle");
 
-    const localDrug = findDrug(trimmedQuery);
-    if (localDrug) {
-      setResult(toResult(localDrug));
-      setStatus("idle");
+    // Let the button's non-blocking comparison state paint before a curated
+    // local lookup completes in the same event turn.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    // 1) Local-first: curated hero searches resolve instantly, offline.
+    const local = lookupLocal(q);
+    if (local.status === 'verified') {
+      setResult(local);
+      setPhase('verified');
       return;
     }
 
