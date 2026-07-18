@@ -12,6 +12,7 @@ type SearchFormProps = {
   onSearch: (query: string) => void;
   isLoading: boolean;
   showEmptyError: boolean;
+  compact?: boolean;
 };
 
 export function SearchForm({
@@ -20,6 +21,7 @@ export function SearchForm({
   onSearch,
   isLoading,
   showEmptyError,
+  compact = false,
 }: SearchFormProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -31,14 +33,20 @@ export function SearchForm({
 
   return (
     <div className="flex flex-col gap-5 lg:max-w-2xl">
-      <div>
-        <h1 className="max-w-[18ch] text-3xl font-bold tracking-[-0.03em] text-slate-950 text-balance sm:max-w-none lg:max-w-[21ch] lg:text-4xl">
-          Compare your medicine price with confidence
-        </h1>
-        <p id="search-hint" className="mt-2 max-w-[61ch] text-sm leading-6 text-slate-600 sm:text-base">
+      {!compact ? (
+        <div>
+          <h1 className="max-w-[18ch] text-3xl font-bold tracking-[-0.03em] text-slate-950 text-balance sm:max-w-none lg:max-w-[21ch] lg:text-4xl">
+            Compare your medicine price with confidence
+          </h1>
+          <p id="search-hint" className="mt-2 max-w-[61ch] text-sm leading-6 text-slate-600 sm:text-base">
+            Search a brand to see a locally verified, like-for-like generic comparison.
+          </p>
+        </div>
+      ) : (
+        <p id="search-hint" className="sr-only">
           Search a brand to see a locally verified, like-for-like generic comparison.
         </p>
-      </div>
+      )}
 
       {/* Enter submits via the native form. */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
