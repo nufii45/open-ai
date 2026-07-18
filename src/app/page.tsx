@@ -23,6 +23,12 @@ type DrugResult = Drug & {
   estimated: boolean;
 };
 
+type DrugLabelInfo = {
+  available: boolean;
+  indication?: string | null;
+  warning?: string | null;
+};
+
 function toResult(drug: Drug, estimated = false): DrugResult {
   return {
     ...drug,
@@ -64,6 +70,8 @@ export default function Home() {
   const [result, setResult] = useState<DrugResult | null>(null);
   const [savedMedicines, setSavedMedicines] = useState<DrugResult[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "empty" | "error">("idle");
+  const [drugInfo, setDrugInfo] = useState<DrugLabelInfo | null>(null);
+  const [drugInfoStatus, setDrugInfoStatus] = useState<"idle" | "loading" | "unavailable">("idle");
 
   useEffect(() => {
     try {
@@ -100,6 +108,8 @@ export default function Home() {
 
     setStatus("loading");
     setResult(null);
+    setDrugInfo(null);
+    setDrugInfoStatus("idle");
 
     const localDrug = findDrug(trimmedQuery);
     if (localDrug) {
@@ -141,6 +151,27 @@ export default function Home() {
       writeSavedMedicines(next);
       return next;
     });
+  }
+
+  async function loadDrugInfo() {
+    if (!result) return;
+    setDrugInfoStatus("loading");
+    setDrugInfo(null);
+
+    try {
+      const response = await fetch(`/api/drug-info?generic=${encodeURIComponent(result.generic)}`);
+      if (!response.ok) throw new Error("FDA label request failed");
+      const data: unknown = await response.json();
+      const info = data as DrugLabelInfo;
+      if (!info.available || (typeof info.indication !== "string" && typeof info.warning !== "string")) {
+        setDrugInfoStatus("unavailable");
+        return;
+      }
+      setDrugInfo(info);
+      setDrugInfoStatus("idle");
+    } catch {
+      setDrugInfoStatus("unavailable");
+    }
   }
 
   return (
@@ -234,6 +265,26 @@ export default function Home() {
                   {savedResult ? <Check aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
                   {savedResult ? "Saved to my list" : "Save to my list"}
                 </Button>
+                <div className="rounded-lg border bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium">Optional FDA label information</p>
+                    {!drugInfo && (
+                      <Button disabled={drugInfoStatus === "loading"} onClick={loadDrugInfo} size="sm" type="button" variant="outline">
+                        {drugInfoStatus === "loading" ? "Loading…" : "View label info"}
+                      </Button>
+                    )}
+                  </div>
+                  {drugInfo && (
+                    <div className="mt-3 space-y-3 text-sm text-slate-700">
+                      {drugInfo.indication && <p><span className="font-semibold">Used for: </span>{drugInfo.indication}</p>}
+                      {drugInfo.warning && <p><span className="font-semibold">Label warning: </span>{drugInfo.warning}</p>}
+                      <p className="text-xs text-slate-500">From openFDA U.S. product labels. This does not replace advice from a doctor or pharmacist.</p>
+                    </div>
+                  )}
+                  {drugInfoStatus === "unavailable" && (
+                    <p className="mt-3 text-sm text-slate-600">FDA label information is not available for this medicine right now.</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
