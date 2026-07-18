@@ -1,65 +1,141 @@
-import Image from "next/image";
+'use client';
+
+import { useCallback, useState } from 'react';
+import { ResultCard } from '@/components/ResultCard';
+import { SavedMedicines } from '@/components/SavedMedicines';
+import { SearchForm } from '@/components/SearchForm';
+import { ErrorCard, LoadingCard, NoMatchCard } from '@/components/StateCards';
+import { lookupLocal, toVerifiedLookup } from '@/lib/lookup';
+import { isValidComparison } from '@/lib/savings';
+import type { DrugComparison, MatchSource, VerifiedLookup } from '@/lib/types';
+import { useSavedMedicines } from '@/lib/useSavedMedicines';
+
+type Phase = 'idle' | 'loading' | 'verified' | 'not_verified' | 'error';
+
+// Narrow an untrusted /api/lookup payload. The client NEVER trusts a savings
+// number from the route: it re-runs the verified gate on the returned record
+// and recomputes savings locally, so a malformed or unverified response can
+// only ever fall through to the "not verified" state.
+function readVerifiedRecord(payload: unknown): { record: DrugComparison; source: MatchSource } | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const data = payload as { status?: unknown; source?: unknown; comparison?: unknown };
+  if (data.status !== 'verified') return null;
+  const record = data.comparison as DrugComparison | undefined;
+  if (!record || !isValidComparison(record)) return null;
+  const source: MatchSource = data.source === 'openai' ? 'openai' : 'curated';
+  return { record, source };
+}
 
 export default function Home() {
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [query, setQuery] = useState('');
+  const [lastQuery, setLastQuery] = useState('');
+  const [result, setResult] = useState<VerifiedLookup | null>(null);
+  const [showEmptyError, setShowEmptyError] = useState(false);
+
+  const { saved, save, remove, isSaved } = useSavedMedicines();
+
+  const runSearch = useCallback(async (raw: string) => {
+    const q = raw.trim();
+    if (!q) {
+      setShowEmptyError(true);
+      setPhase('idle');
+      setResult(null);
+      return;
+    }
+    setShowEmptyError(false);
+    setLastQuery(q);
+    setPhase('loading');
+    setResult(null);
+
+    // 1) Local-first: curated hero searches resolve instantly, offline.
+    const local = lookupLocal(q);
+    if (local.status === 'verified') {
+      setResult(local);
+      setPhase('verified');
+      return;
+    }
+
+    // 2) Fall back to the server route (owned by the backend team). Prices are
+    //    re-validated client-side before anything renders.
+    try {
+      const res = await fetch(`/api/lookup?q=${encodeURIComponent(q)}`, {
+        headers: { accept: 'application/json' },
+      });
+      if (res.status >= 500) {
+        setPhase('error');
+        return;
+      }
+      if (!res.ok) {
+        setPhase('not_verified');
+        return;
+      }
+      const verified = readVerifiedRecord(await res.json());
+      if (verified) {
+        setResult(toVerifiedLookup(verified.record, verified.source));
+        setPhase('verified');
+      } else {
+        setPhase('not_verified');
+      }
+    } catch {
+      // Route unavailable (still being built) or offline — stay useful and
+      // safe by treating it as "not verified locally", never an invented result.
+      setPhase('not_verified');
+    }
+  }, []);
+
+  const handleSave = useCallback(() => {
+    if (!result) return;
+    save({
+      id: result.comparison.id,
+      brand: result.comparison.brand,
+      generic: result.comparison.generic,
+      savings: result.savings.savings,
+    });
+  }, [result, save]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-4 py-6 sm:py-10 lg:max-w-6xl lg:px-8 lg:py-12">
+      <header className="mb-9 lg:mb-12 lg:flex lg:items-end lg:justify-between lg:gap-8">
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-[10px] bg-teal-600 text-sm font-bold text-white shadow-sm">
+            H
+          </span>
+          <span className="text-base font-semibold tracking-tight text-slate-900">HealthBridge</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <p className="mt-1.5 text-sm text-slate-600">Clear, verified medicine price comparisons.</p>
+      </header>
+
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-x-12">
+        <div>
+          <SearchForm
+            query={query}
+            onQueryChange={setQuery}
+            onSearch={runSearch}
+            isLoading={phase === 'loading'}
+            showEmptyError={showEmptyError}
+          />
+
+          <section aria-live="polite" aria-atomic="true" className="mt-7 lg:mt-8">
+            {phase === 'loading' ? <LoadingCard /> : null}
+            {phase === 'not_verified' ? <NoMatchCard query={lastQuery} /> : null}
+            {phase === 'error' ? <ErrorCard onRetry={() => runSearch(lastQuery)} /> : null}
+            {phase === 'verified' && result ? (
+              <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
+                <ResultCard
+                  result={result}
+                  isSaved={isSaved(result.comparison.id)}
+                  onSave={handleSave}
+                />
+              </div>
+            ) : null}
+          </section>
         </div>
-      </main>
-    </div>
+
+        <aside className="lg:sticky lg:top-8">
+          <SavedMedicines saved={saved} onRemove={remove} />
+        </aside>
+      </div>
+    </main>
   );
 }
