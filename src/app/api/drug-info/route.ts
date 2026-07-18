@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
   try {
     const params = new URLSearchParams({
-      search: `openfda.generic_name.exact:"${generic.replaceAll('"', "")}"`,
+      search: `openfda.generic_name:"${generic.replaceAll('"', "")}"`,
       limit: "1",
     });
     const response = await fetch(`${OPEN_FDA_LABEL_URL}?${params}`, {
