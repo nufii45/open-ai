@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, Plus } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PharmacyLocator } from '@/components/PharmacyLocator';
@@ -19,7 +20,10 @@ type ResultCardProps = {
 
 export function ResultCard({ result, isSaved, onSave }: ResultCardProps) {
   const { comparison, savings, source } = result;
+  const [packsPerMonth, setPacksPerMonth] = useState(1);
   const isEstimated = source === 'openai';
+  const monthlySavings = savings.savings * packsPerMonth;
+  const annualSavings = monthlySavings * 12;
   const priceCheckedOn = new Intl.DateTimeFormat('en-PH', {
     day: 'numeric',
     month: 'short',
@@ -55,6 +59,52 @@ export function ResultCard({ result, isSaved, onSave }: ResultCardProps) {
           {comparison.packUnit}
         </p>
       </div>
+
+      <section
+        aria-labelledby="personal-savings-heading"
+        className="rounded-xl border border-teal-200 bg-teal-50/60 p-4"
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 id="personal-savings-heading" className="text-sm font-semibold text-teal-950">
+              Make the saving personal
+            </h3>
+            <p className="mt-1 text-sm leading-5 text-teal-900/80">
+              How many matching packs do you already buy each month?
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm font-medium text-teal-950">
+            <span className="sr-only">Matching packs per month</span>
+            <input
+              type="number"
+              min="1"
+              max="31"
+              step="1"
+              inputMode="numeric"
+              value={packsPerMonth}
+              onChange={(event) => {
+                const value = Number(event.target.value);
+                setPacksPerMonth(Number.isFinite(value) ? Math.min(31, Math.max(1, Math.round(value))) : 1);
+              }}
+              className="h-10 w-16 rounded-lg border border-teal-300 bg-white px-2 text-center tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+            />
+            packs/month
+          </label>
+        </div>
+        <div className="mt-4 grid grid-cols-2 divide-x divide-teal-200 rounded-lg border border-teal-200 bg-white">
+          <div className="p-3">
+            <p className="text-xs font-medium text-slate-600">Potential monthly saving</p>
+            <p className="mt-1 text-xl font-bold text-teal-800 tabular-nums">{formatPHP(monthlySavings)}</p>
+          </div>
+          <div className="p-3">
+            <p className="text-xs font-medium text-slate-600">Potential yearly saving</p>
+            <p className="mt-1 text-xl font-bold text-teal-800 tabular-nums">{formatPHP(annualSavings)}</p>
+          </div>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-teal-900/80">
+          Based on the packs you already purchase. This is not a dosage or treatment recommendation.
+        </p>
+      </section>
 
       {/* Brand → generic */}
       <div>
