@@ -1,11 +1,25 @@
 'use client';
 
-import { ArrowRight, Sparkles } from 'lucide-react';
-import { useEffect } from 'react';
+import { ArrowRight } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const INTRO_DURATION_MS = 4_200;
+const INTRO_EXIT_DURATION_MS = 650;
 
 export function LandingIntro({ onComplete }: { onComplete: () => void }) {
+  const [isExiting, setIsExiting] = useState(false);
+  const introTimerRef = useRef<number | null>(null);
+  const exitTimerRef = useRef<number | null>(null);
+  const hasStartedExitRef = useRef(false);
+
+  const beginExit = useCallback((instant = false) => {
+    if (hasStartedExitRef.current) return;
+
+    hasStartedExitRef.current = true;
+    setIsExiting(true);
+    exitTimerRef.current = window.setTimeout(onComplete, instant ? 0 : INTRO_EXIT_DURATION_MS);
+  }, [onComplete]);
+
   useEffect(() => {
     let reducedMotion = false;
 
@@ -15,19 +29,22 @@ export function LandingIntro({ onComplete }: { onComplete: () => void }) {
       // The intro remains usable when storage or media queries are unavailable.
     }
 
-    const timer = window.setTimeout(() => {
-      onComplete();
+    introTimerRef.current = window.setTimeout(() => {
+      beginExit(reducedMotion);
     }, reducedMotion ? 0 : INTRO_DURATION_MS);
 
-    return () => window.clearTimeout(timer);
-  }, [onComplete]);
+    return () => {
+      if (introTimerRef.current !== null) window.clearTimeout(introTimerRef.current);
+      if (exitTimerRef.current !== null) window.clearTimeout(exitTimerRef.current);
+    };
+  }, [beginExit]);
 
   function skip() {
-    onComplete();
+    beginExit();
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-6 text-white">
+    <main className={`relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-6 text-white transition-opacity duration-700 ease-out ${isExiting ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
       <div className="hb-orbit hb-orbit-one" aria-hidden="true" />
       <div className="hb-orbit hb-orbit-two" aria-hidden="true" />
       <button type="button" onClick={skip} className="absolute right-6 top-6 z-10 rounded-full border border-white/15 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">
@@ -36,7 +53,6 @@ export function LandingIntro({ onComplete }: { onComplete: () => void }) {
       <div className="relative z-10 flex max-w-xl flex-col items-center text-center">
         <div className="hb-intro-logo flex size-20 items-center justify-center rounded-[28px] bg-white text-3xl font-black text-slate-950 shadow-2xl shadow-teal-300/20">H</div>
         <div className="hb-intro-copy mt-7">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-teal-300/30 bg-teal-300/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-teal-100"><Sparkles className="size-3.5" aria-hidden="true" /> HEALTHBRIDGE</div>
           <h1 className="text-5xl font-bold leading-[0.95] tracking-[-0.06em] sm:text-6xl">A clearer choice starts here.</h1>
           <p className="mt-5 text-base leading-7 text-slate-300 sm:text-lg">Find a verified generic comparison, see the difference, and keep the saving that matters.</p>
         </div>
