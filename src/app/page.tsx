@@ -75,9 +75,9 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:py-12">
+    <>
       <DisclaimerModal />
-    <main className="min-h-screen bg-[#f5f5f7] px-4 py-5 text-slate-950 sm:px-6 lg:py-8">
+      <main className="min-h-screen bg-[#f5f5f7] px-4 py-5 text-slate-950 sm:px-6 lg:py-8">
       <div className="mx-auto w-full max-w-6xl">
         <header className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -125,6 +125,7 @@ export default function Home() {
           </div>
         )}
       </div>
-    </main>
+      </main>
+    </>
   );
 }
