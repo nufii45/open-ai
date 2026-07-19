@@ -6,10 +6,22 @@ import type { SamplePharmacy } from '@/lib/types';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MAX_RESULTS = 10;
+const PAGE_SIZE = 5;
+const MAX_PAGE = 19;
 const MAX_RADIUS_METERS = 8_000;
 
 type Coordinates = { latitude: number; longitude: number };
+type CareCategory = 'pharmacy' | 'clinic' | 'laboratory' | 'hospital';
+
+const GEOAPIFY_CATEGORIES: Record<CareCategory, string> = {
+  pharmacy: 'healthcare.pharmacy',
+  clinic: 'healthcare.clinic_or_praxis',
+  // Geoapify does not expose a laboratory-specific Places category. Use the
+  // broader healthcare category rather than sending an invalid query, and keep
+  // the UI's existing “confirm services” language prominent.
+  laboratory: 'healthcare',
+  hospital: 'healthcare.hospital',
+};
 
 type GeoapifyFeature = {
   properties?: { place_id?: string; name?: string; formatted?: string; address_line1?: string };
@@ -29,19 +41,24 @@ export async function POST(request: NextRequest) {
   if (!apiKey) return NextResponse.json({ error: 'Nearby pharmacy search is not configured.' }, { status: 503 });
 
   let origin: Coordinates | undefined;
+  let category: CareCategory = 'pharmacy';
+  let page = 0;
   try {
     const body = await request.json();
     origin = body?.origin;
+    if (body?.category && body.category in GEOAPIFY_CATEGORIES) category = body.category as CareCategory;
+    if (Number.isInteger(body?.page) && body.page >= 0 && body.page <= MAX_PAGE) page = body.page;
   } catch {
     // Validated below.
   }
   if (!validCoordinates(origin)) return NextResponse.json({ error: 'A valid location is required.' }, { status: 400 });
 
   const url = new URL('https://api.geoapify.com/v2/places');
-  url.searchParams.set('categories', 'healthcare.pharmacy');
+  url.searchParams.set('categories', GEOAPIFY_CATEGORIES[category]);
   url.searchParams.set('filter', `circle:${origin.longitude},${origin.latitude},${MAX_RADIUS_METERS}`);
   url.searchParams.set('bias', `proximity:${origin.longitude},${origin.latitude}`);
-  url.searchParams.set('limit', String(MAX_RESULTS));
+  url.searchParams.set('limit', String(PAGE_SIZE + 1));
+  url.searchParams.set('offset', String(page * PAGE_SIZE));
   url.searchParams.set('apiKey', apiKey);
 
   try {
@@ -49,7 +66,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) throw new Error('Places request failed');
     const data = (await response.json()) as { features?: GeoapifyFeature[] };
     const seen = new Set<string>();
-    const entries = (data.features ?? []).flatMap((feature): Array<{ pharmacy: SamplePharmacy; location: PharmacyMapLocation }> => {
+    const entries = (data.features ?? []).slice(0, PAGE_SIZE).flatMap((feature): Array<{ pharmacy: SamplePharmacy; location: PharmacyMapLocation }> => {
       const [longitude, latitude] = feature.geometry?.coordinates ?? [];
       const placeId = feature.properties?.place_id;
       const name = feature.properties?.name?.trim();
@@ -63,7 +80,7 @@ export async function POST(request: NextRequest) {
       }];
     });
     return NextResponse.json(
-      { source: 'geoapify-osm', pharmacies: entries.map((entry) => entry.pharmacy), locations: entries.map((entry) => entry.location) },
+      { source: 'geoapify-osm', category, page, pageSize: PAGE_SIZE, hasMore: (data.features?.length ?? 0) > PAGE_SIZE, pharmacies: entries.map((entry) => entry.pharmacy), locations: entries.map((entry) => entry.location) },
       { headers: { 'Cache-Control': 'private, max-age=300' } },
     );
   } catch {

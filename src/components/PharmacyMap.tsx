@@ -51,13 +51,13 @@ export function PharmacyMap({
   );
 
   return (
-    <div className="pharmacy-map h-72 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:h-80">
+    <div className="pharmacy-map h-56 overflow-hidden rounded-xl border border-stone-300 bg-slate-100 sm:h-64">
       <MapContainer
         center={[firstLocation.latitude, firstLocation.longitude]}
         zoom={14}
         scrollWheelZoom={false}
         className="h-full w-full"
-        aria-label="Nearby pharmacy locations and selected route"
+        aria-label="Nearby care locations and selected route"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -65,13 +65,13 @@ export function PharmacyMap({
         />
         <FitMapBounds locations={locations} origin={origin} routeCoordinates={routeCoordinates} />
         {routePositions.length > 1 ? (
-          <Polyline positions={routePositions} pathOptions={{ color: '#0f766e', weight: 5, opacity: 0.82 }} />
+          <Polyline positions={routePositions} pathOptions={{ color: '#1d4ed8', weight: 5, opacity: 0.86 }} />
         ) : null}
         {origin ? (
           <CircleMarker
             center={[origin.latitude, origin.longitude]}
             radius={8}
-            pathOptions={{ color: '#ffffff', weight: 3, fillColor: '#0f766e', fillOpacity: 1 }}
+            pathOptions={{ color: '#ffffff', weight: 3, fillColor: '#1d4ed8', fillOpacity: 1 }}
           >
             <Popup>Your shared location</Popup>
           </CircleMarker>
@@ -89,7 +89,7 @@ export function PharmacyMap({
               pathOptions={{
                 color: '#ffffff',
                 weight: 3,
-                fillColor: isSelected ? '#0f766e' : '#334155',
+                fillColor: isSelected ? '#1d4ed8' : '#475569',
                 fillOpacity: 1,
               }}
             >

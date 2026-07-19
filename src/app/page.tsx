@@ -1,151 +1,105 @@
 'use client';
 
-import { ArrowLeft, ShieldCheck, Sparkles, WalletCards } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, CheckCircle2, Compass, FlaskConical, Hospital, Pill, ShieldCheck } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useCallback, useState } from 'react';
 
+import { CareVisitBrief } from '@/components/CareVisitBrief';
 import { DisclaimerModal } from '@/components/DisclaimerModal';
 import { LandingIntro } from '@/components/LandingIntro';
-import { ResultCard } from '@/components/ResultCard';
-import { SavedMedicines } from '@/components/SavedMedicines';
-import { SearchForm } from '@/components/SearchForm';
-import { ErrorCard, LoadingCard, NoMatchCard } from '@/components/StateCards';
-import { lookupLocal } from '@/lib/lookup';
-import { useSavedMedicines } from '@/lib/useSavedMedicines';
-import type { LookupOutcome, VerifiedLookup } from '@/lib/types';
+import { MedicineCounterCheck } from '@/components/MedicineCounterCheck';
+import { PharmacyLocator } from '@/components/PharmacyLocator';
+import { SavedCarePlans } from '@/components/SavedCarePlans';
+import { VisitNoteAssistant } from '@/components/VisitNoteAssistant';
+import { CARE_JOURNEYS, type CareJourneyId } from '@/lib/careJourneys';
+import { SAMPLE_PHARMACIES } from '@/lib/pharmacies';
+import type { DrugComparison } from '@/lib/types';
+import { useSavedCarePlans } from '@/lib/useSavedCarePlans';
 
-type SearchPhase = 'idle' | 'loading' | 'verified' | 'not_verified' | 'error';
+const icons = { pharmacy: Pill, clinic: Building2, laboratory: FlaskConical, discharge: Hospital };
+const STEPS = ['Choose visit', 'Check details', 'Prepare plan', 'Find a place'];
 
-const trustPoints = [
-  { icon: ShieldCheck, title: 'Like-for-like', text: 'Same ingredient, strength, form, and pack.' },
-  { icon: Sparkles, title: 'Show your impact', text: 'Turn a pack saving into a personal plan.' },
-  { icon: WalletCards, title: 'Keep your list', text: 'Save verified comparisons on this device.' },
+const heroCopy = [
+  { eyebrow: 'A CLEARER START', title: 'Choose the kind of care visit you are preparing for.', detail: 'Start simple. You can change your path whenever you need to.' },
+  { eyebrow: 'CHECK BEFORE YOU BUY', title: 'Make the counter conversation easier.', detail: 'Confirm the exact pack and compare only the prices you personally see.' },
+  { eyebrow: 'YOUR WORDS, ORGANIZED', title: 'Bring the right questions into the room.', detail: 'Turn a temporary note into a practical conversation card, without a diagnosis.' },
+  { eyebrow: 'A CALMER NEXT STEP', title: 'Find a nearby place when you are ready.', detail: 'Location is used only for this search and is never saved to your plan.' },
 ];
 
+function StepControls({ step, onBack, onNext, nextLabel }: { step: number; onBack: () => void; onNext: () => void; nextLabel: string }) {
+  return <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-5">
+    <button type="button" onClick={onBack} disabled={step === 1} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"><ArrowLeft className="size-4" aria-hidden="true" />Back</button>
+    {step < STEPS.length ? <button type="button" onClick={onNext} className="hb-primary-cta inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">{nextLabel}<ArrowRight className="size-4" aria-hidden="true" /></button> : <span className="inline-flex items-center gap-2 rounded-xl bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800"><CheckCircle2 className="size-4" aria-hidden="true" />Visit plan ready</span>}
+  </div>;
+}
+
+function ProgressRail({ step, onStepChange }: { step: number; onStepChange: (step: number) => void }) {
+  return <nav aria-label="Visit preparation progress" className="hb-progress-rail rounded-[1.35rem] border border-stone-300 bg-[#f8f1e7]/95 p-3 shadow-sm">
+    <div className="grid grid-cols-4 gap-1">{STEPS.map((label, index) => {
+      const indexStep = index + 1;
+      const active = indexStep === step;
+      const done = indexStep < step;
+      return <button key={label} type="button" onClick={() => indexStep <= step && onStepChange(indexStep)} disabled={indexStep > step} aria-current={active ? 'step' : undefined} className={`relative min-h-15 border-l px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 first:border-l-0 ${active ? 'text-slate-950' : done ? 'text-slate-700 hover:bg-[#eee6da]' : 'cursor-not-allowed text-slate-400'}`}>
+        <span className={`flex size-6 items-center justify-center rounded-full text-[10px] font-bold ${active ? 'bg-blue-800 text-white shadow-sm shadow-blue-900/25' : done ? 'bg-slate-950 text-[#f8f1e7]' : 'border border-stone-300 bg-[#fbf8f2] text-slate-500'}`}>{done ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : String(indexStep).padStart(2, '0')}</span><span className="mt-1.5 block text-[11px] font-semibold leading-4 sm:text-xs">{label}</span>{active ? <motion.span layoutId="active-step-rule" className="absolute bottom-0 left-2.5 right-2.5 h-0.5 bg-blue-800" transition={{ type: 'spring', stiffness: 330, damping: 30 }} /> : null}
+      </button>;
+    })}</div>
+  </nav>;
+}
+
 export default function Home() {
-  const [query, setQuery] = useState('');
-  const [phase, setPhase] = useState<SearchPhase>('idle');
-  const [outcome, setOutcome] = useState<LookupOutcome | null>(null);
-  const [showEmptyError, setShowEmptyError] = useState(false);
+  const reduceMotion = useReducedMotion();
   const [introComplete, setIntroComplete] = useState(false);
-  const { saved, save, remove, setPurchased, isSaved } = useSavedMedicines();
-
-  async function search(rawQuery: string) {
-    const trimmedQuery = rawQuery.trim();
-    setQuery(rawQuery);
-
-    if (!trimmedQuery) {
-      setShowEmptyError(true);
-      setOutcome(null);
-      setPhase('idle');
-      return;
-    }
-
-    setShowEmptyError(false);
-    setOutcome(null);
-    setPhase('loading');
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-    try {
-      const nextOutcome = lookupLocal(trimmedQuery);
-      setOutcome(nextOutcome);
-      setPhase(nextOutcome.status);
-    } catch {
-      setPhase('error');
-    }
-  }
-
-  function saveComparison(result: VerifiedLookup) {
-    const { comparison, savings } = result;
-    save({
-      id: comparison.id,
-      brand: comparison.brand,
-      generic: comparison.generic,
-      savings: savings.savings,
-      isPurchased: false,
-    });
-  }
-
-  const verifiedResult = outcome?.status === 'verified' ? outcome : null;
-  const isLanding = phase === 'idle' && !outcome;
+  const [selectedId, setSelectedId] = useState<CareJourneyId>('pharmacy');
+  const [selectedMedicine, setSelectedMedicine] = useState<DrugComparison | null>(null);
+  const [step, setStep] = useState(1);
+  const { saved, save, remove, isSaved } = useSavedCarePlans();
+  const selected = CARE_JOURNEYS.find((journey) => journey.id === selectedId)!;
+  const planId = `${selected.id}:${selectedMedicine?.id ?? 'visit'}`;
   const finishIntro = useCallback(() => setIntroComplete(true), []);
+  const hero = heroCopy[step - 1];
 
-  function startNewComparison() {
-    setQuery('');
-    setOutcome(null);
-    setShowEmptyError(false);
-    setPhase('idle');
+  if (!introComplete) return <LandingIntro onComplete={finishIntro} />;
+
+  function chooseJourney(id: CareJourneyId) {
+    setSelectedId(id);
+    setSelectedMedicine(null);
   }
 
-  if (!introComplete) {
-    return <LandingIntro onComplete={finishIntro} />;
-  }
+  return <>
+    <DisclaimerModal />
+    <main className="hb-app-shell min-h-screen px-4 py-5 text-slate-950 sm:px-6 lg:py-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <motion.header initial={reduceMotion ? false : { opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.45, ease: [0.16, 1, 0.3, 1] }} className="mb-6 flex items-center justify-between sm:mb-8">
+          <div className="flex items-center gap-3"><div className="hb-brand-mark flex size-10 items-center justify-center rounded-[14px] bg-slate-950 text-lg font-bold text-white shadow-lg shadow-slate-900/20">H</div><div><p className="text-lg font-bold tracking-tight">HealthBridge</p><p className="text-xs text-slate-500">Care visit preparation</p></div></div>
+          <p className="hidden rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur sm:block">Built for thoughtful choices</p>
+        </motion.header>
 
-  return (
-    <>
-      <DisclaimerModal />
-      <main className="min-h-screen bg-[#f5f5f7] px-4 py-5 text-slate-950 sm:px-6 lg:py-8">
-        <div className="mx-auto w-full max-w-6xl">
-          <header className="mb-8 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-[14px] bg-slate-950 text-lg font-bold text-white shadow-lg shadow-slate-900/20">H</div>
-              <div>
-                <p className="text-lg font-bold tracking-tight">HealthBridge</p>
-                <p className="text-xs text-slate-500">Verified medicine comparisons</p>
-              </div>
-            </div>
-            <p className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 sm:block">Built for thoughtful choices</p>
-          </header>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+          <div className="space-y-5">
+            <motion.section layout initial={reduceMotion ? false : { opacity: 0, scale: 0.985 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.16, 1, 0.3, 1] }} className="hb-hero-surface relative min-h-64 overflow-hidden rounded-[1.5rem] px-6 py-7 text-white shadow-xl shadow-slate-900/15 sm:px-8">
+              <div className="hb-hero-aura pointer-events-none absolute -right-16 -top-24 size-72 rounded-full" aria-hidden="true" />
+              <div className="pointer-events-none absolute -bottom-24 left-1/3 size-60 rounded-full bg-indigo-400/10 blur-3xl" aria-hidden="true" />
+              <div className="hb-depth-scene pointer-events-none absolute bottom-3 right-4 hidden h-48 w-60 md:block" aria-hidden="true"><div className="hb-depth-orbit hb-depth-orbit-one" /><div className="hb-depth-orbit hb-depth-orbit-two" /><div className="hb-depth-card hb-depth-card-back"><span>Private</span><strong>by design</strong></div><div className="hb-depth-card hb-depth-card-front"><span>HealthBridge</span><strong>Care, clarified</strong><i /></div><div className="hb-depth-pulse" /></div>
+              <AnimatePresence mode="wait" initial={false}><motion.div key={step} initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? undefined : { opacity: 0, y: -8 }} transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }} className="relative flex h-full max-w-xl flex-col justify-between"><div><p className="text-xs font-semibold tracking-[0.16em] text-teal-200">{hero.eyebrow}</p><h1 className="mt-3 max-w-[21ch] text-3xl font-bold leading-[0.98] tracking-[-0.045em] sm:text-4xl">{hero.title}</h1><p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">{hero.detail}</p></div><div className="mt-6 flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-xs font-medium text-slate-300"><span className="size-2 rounded-full bg-teal-300 shadow-[0_0_0_5px_rgb(94_234_212/0.1)]" />Private by default</span><span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-teal-100">Step {step} of {STEPS.length}</span></div></motion.div></AnimatePresence>
+            </motion.section>
 
-          {isLanding ? (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-              <section className="relative overflow-hidden rounded-[2rem] bg-slate-950 px-6 py-10 text-white shadow-2xl shadow-slate-900/20 sm:px-10 sm:py-14">
-                <div className="pointer-events-none absolute -right-24 -top-28 size-80 rounded-full bg-teal-400/25 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-40 left-1/3 size-96 rounded-full bg-blue-500/20 blur-3xl" />
-                <div className="relative max-w-2xl">
-                  <p className="mb-4 text-sm font-semibold tracking-wide text-teal-200">KNOW THE DIFFERENCE</p>
-                  <h1 className="max-w-[14ch] text-5xl font-bold leading-[0.96] tracking-[-0.055em] sm:text-6xl">Your medicine. A clearer choice.</h1>
-                  <p className="mt-6 max-w-xl text-base leading-7 text-slate-300 sm:text-lg">Compare a trusted brand with a like-for-like generic, see the evidence behind the saving, and keep what matters to you.</p>
-                  <div className="mt-8 rounded-2xl border border-white/15 bg-white p-4 text-slate-950 shadow-xl shadow-black/10 sm:p-5">
-                    <SearchForm query={query} onQueryChange={setQuery} onSearch={search} isLoading={false} showEmptyError={showEmptyError} compact />
-                  </div>
-                </div>
-              </section>
-              <div className="space-y-4">
-                {trustPoints.map(({ icon: Icon, title, text }) => (
-                  <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <Icon className="size-5 text-teal-700" aria-hidden="true" />
-                    <h2 className="mt-4 font-semibold tracking-tight">{title}</h2>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">{text}</p>
-                  </div>
-                ))}
-                <SavedMedicines saved={saved} onPurchaseChange={setPurchased} onRemove={remove} />
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-              <section className="space-y-6">
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-950">New comparison</p>
-                      <p className="text-xs text-slate-500">Search another verified medicine.</p>
-                    </div>
-                    <button type="button" onClick={startNewComparison} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-slate-200 px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600">
-                      <ArrowLeft className="size-4" aria-hidden="true" /> Home
-                    </button>
-                  </div>
-                  <SearchForm query={query} onQueryChange={setQuery} onSearch={search} isLoading={phase === 'loading'} showEmptyError={showEmptyError} compact />
-                </div>
-                {phase === 'loading' ? <LoadingCard /> : null}
-                {phase === 'not_verified' ? <NoMatchCard query={outcome?.status === 'not_verified' ? outcome.query : query} reason={outcome?.status === 'not_verified' ? outcome.reason : 'unknown'} /> : null}
-                {phase === 'error' ? <ErrorCard onRetry={() => void search(query)} /> : null}
-                {verifiedResult ? <ResultCard result={verifiedResult} isSaved={isSaved(verifiedResult.comparison.id)} onSave={() => saveComparison(verifiedResult)} /> : null}
-              </section>
-              <SavedMedicines saved={saved} onPurchaseChange={setPurchased} onRemove={remove} />
-            </div>
-          )}
+            <ProgressRail step={step} onStepChange={setStep} />
+
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div key={step} initial={reduceMotion ? false : { opacity: 0, y: 14, filter: 'blur(3px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0)' }} exit={reduceMotion ? undefined : { opacity: 0, y: -8, filter: 'blur(2px)' }} transition={{ duration: reduceMotion ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}>
+                {step === 1 ? <section aria-labelledby="journeys-heading" className="hb-field-guide rounded-[1.5rem] border border-stone-300 bg-[#f8f1e7] p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e6e7f8] text-blue-800"><Compass className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold tracking-[0.14em] text-blue-800">STEP 1 · YOUR PATH</p><h2 id="journeys-heading" className="mt-1 text-xl font-bold tracking-tight">What are you preparing for?</h2><p className="mt-1 text-sm leading-6 text-slate-600">Choose one focused path. It keeps the rest of your visit plan simple.</p></div></div><motion.div initial="hidden" animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: reduceMotion ? 0 : 0.06 } } }} className="mt-5 grid gap-3 sm:grid-cols-2">{CARE_JOURNEYS.map((journey) => { const Icon = icons[journey.id]; const active = journey.id === selectedId; return <motion.button variants={{ hidden: { opacity: 0, y: reduceMotion ? 0 : 10 }, show: { opacity: 1, y: 0 } }} key={journey.id} type="button" onClick={() => chooseJourney(journey.id)} aria-pressed={active} className={`hb-path-card relative rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 ${active ? 'border-blue-700 bg-[#e6e7f8] shadow-sm shadow-blue-950/5' : 'border-stone-300 bg-[#fbf8f2] hover:border-blue-300 hover:shadow-md hover:shadow-slate-900/5'}`}>{journey.id === 'pharmacy' && !active ? <span className="absolute right-3 top-3 rounded-full bg-slate-950 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Popular</span> : null}{active ? <CheckCircle2 className="absolute right-3 top-3 size-5 text-blue-800" aria-label="Selected" /> : null}<Icon className={`size-5 ${active ? 'text-blue-800' : 'text-slate-600'}`} aria-hidden="true" /><h3 className="mt-4 font-semibold text-slate-950">{journey.title}</h3><p className="mt-1 text-sm leading-6 text-slate-600">{journey.description}</p></motion.button>; })}</motion.div><StepControls step={step} onBack={() => setStep(1)} onNext={() => setStep(2)} nextLabel="Continue to details" /></section> : null}
+
+                {step === 2 ? <section>{selected.id === 'pharmacy' ? <MedicineCounterCheck onSelect={setSelectedMedicine} /> : <section className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm backdrop-blur sm:p-6"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><ShieldCheck className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold tracking-[0.14em] text-teal-700">STEP 2 · PRACTICAL DETAILS</p><h2 className="mt-1 text-xl font-bold tracking-tight">Gather the details that help the visit go smoothly</h2><p className="mt-1 text-sm leading-6 text-slate-600">For your {selected.shortTitle.toLowerCase()} visit, keep this short checklist handy.</p></div></div><motion.ul initial="hidden" animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: reduceMotion ? 0 : 0.06 } } }} className="mt-5 space-y-3">{selected.preparation.map((item, index) => <motion.li variants={{ hidden: { opacity: 0, x: reduceMotion ? 0 : -10 }, show: { opacity: 1, x: 0 } }} key={item} className="flex gap-3 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-700"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-teal-700 shadow-sm">{index + 1}</span>{item}</motion.li>)}</motion.ul></section>}<StepControls step={step} onBack={() => setStep(1)} onNext={() => setStep(3)} nextLabel="Prepare my plan" /></section> : null}
+
+                {step === 3 ? <section className="space-y-5"><VisitNoteAssistant journey={selected} /><CareVisitBrief journey={selected} saved={isSaved(planId)} onSave={() => save({ id: planId, title: selectedMedicine ? `${selected.title} · ${selectedMedicine.brand}` : selected.title, savedAt: new Date().toISOString() })} /><StepControls step={step} onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel="Find nearby places" /></section> : null}
+
+                {step === 4 ? <section><PharmacyLocator key={selected.id} pharmacies={SAMPLE_PHARMACIES} category={selected.locationCategory} /><StepControls step={step} onBack={() => setStep(3)} onNext={() => setStep(4)} nextLabel="Done" /></section> : null}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          <motion.div initial={reduceMotion ? false : { opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: reduceMotion ? 0 : 0.45, delay: reduceMotion ? 0 : 0.1, ease: [0.16, 1, 0.3, 1] }} className="lg:sticky lg:top-6"><SavedCarePlans saved={saved} onRemove={remove} /><div className="mt-4 hidden rounded-2xl border border-white/70 bg-white/55 p-4 text-xs leading-5 text-slate-500 backdrop-blur lg:block"><p className="font-semibold text-slate-700">Designed for a real conversation</p><p className="mt-1">HealthBridge organizes what you want to ask. It does not diagnose or tell you to change medicine.</p></div></motion.div>
         </div>
-      </main>
-    </>
-  );
+      </div>
+    </main>
+  </>;
 }
