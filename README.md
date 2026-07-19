@@ -10,7 +10,7 @@ It is not medical advice and does not tell anyone to start, stop, or change a me
 2. HealthBridge shows a saving only when both matching packs have current, human-checked evidence.
 3. Review active ingredient, strength, dosage form, pack, source, and observation date.
 4. Generate or copy a constrained pharmacist-ready question.
-5. Save the comparison locally on the device or open illustrative pharmacy directions.
+5. Save the comparison locally on the device or opt in to nearby pharmacy map results and directions.
 
 Unknown medicines and catalog records without verified evidence intentionally show **Not yet verified locally**. The app never invents a generic, price, diagnosis, dose, or substitution recommendation.
 
@@ -39,6 +39,8 @@ GEOAPIFY_API_KEY=your_server_only_key
 ```
 
 Never use `NEXT_PUBLIC_` for either secret. In Vercel, connect the project to `nufii45/open-ai` and add the values in Environment Variables.
+
+Nearby pharmacy results use Geoapify's OpenStreetMap-derived `healthcare.pharmacy` places data only after the visitor grants browser location permission. Location is not stored. Results, routes, and directions do not indicate medicine stock, prices, hours, or availability.
 
 ## Run locally
 

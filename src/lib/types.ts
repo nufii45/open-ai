@@ -57,7 +57,7 @@ export type SamplePharmacy = {
   branch: string;
   /** Google Maps search URL — opens directions without geolocation. */
   directionsUrl: string;
-  label: 'Illustrative option';
+  label: 'Illustrative option' | 'Nearby map result';
   note: string;
 };
 
