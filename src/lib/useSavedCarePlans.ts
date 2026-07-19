@@ -19,7 +19,12 @@ function parse(raw: string | null): SavedCarePlan[] {
     return rows.flatMap((row): SavedCarePlan[] => {
       if (!row || typeof row !== 'object') return [];
       const item = row as Partial<SavedCarePlan>;
-      if (typeof item.id !== 'string' || typeof item.title !== 'string' || typeof item.savedAt !== 'string') return [];
+      if (
+        typeof item.id !== 'string' ||
+        typeof item.title !== 'string' ||
+        typeof item.savedAt !== 'string'
+      )
+        return [];
       return [{ id: item.id, title: item.title, savedAt: item.savedAt }];
     });
   } catch {
@@ -63,7 +68,10 @@ export function useSavedCarePlans() {
     if (getSnapshot().some((item) => item.id === plan.id)) return;
     write([...getSnapshot(), plan]);
   }, []);
-  const remove = useCallback((id: string) => write(getSnapshot().filter((item) => item.id !== id)), []);
+  const remove = useCallback(
+    (id: string) => write(getSnapshot().filter((item) => item.id !== id)),
+    [],
+  );
   const isSaved = useCallback((id: string) => saved.some((item) => item.id === id), [saved]);
   return { saved, save, remove, isSaved };
 }

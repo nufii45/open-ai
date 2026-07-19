@@ -1,6 +1,7 @@
 import { findCareJourney } from './careJourneys';
 
-export const VISIT_NOTE_SAFETY_REMINDER = 'HealthBridge organizes your own words for a care conversation. It does not diagnose symptoms, assess urgency, prescribe, or replace a health professional.';
+export const VISIT_NOTE_SAFETY_REMINDER =
+  'HealthBridge organizes your own words for a care conversation. It does not diagnose symptoms, assess urgency, prescribe, or replace a health professional.';
 
 export type VisitNote = {
   summary: string;
@@ -8,7 +9,8 @@ export type VisitNote = {
   source: 'ai' | 'template';
 };
 
-const FORBIDDEN_LANGUAGE = /\b(diagnos\w*|you have|likely have|prescrib\w*|dosage|dose|contraindicat\w*|safe to|start taking|stop taking|treatment plan|emergency treatment|seek emergency|go to the emergency)\b/i;
+const FORBIDDEN_LANGUAGE =
+  /\b(diagnos\w*|you have|likely have|prescrib\w*|dosage|dose|contraindicat\w*|safe to|start taking|stop taking|treatment plan|emergency treatment|seek emergency|go to the emergency)\b/i;
 
 export function normaliseVisitNote(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -17,7 +19,12 @@ export function normaliseVisitNote(value: unknown): string | null {
 }
 
 function isSafeText(value: unknown, minimum = 8, maximum = 360): value is string {
-  return typeof value === 'string' && value.trim().length >= minimum && value.trim().length <= maximum && !FORBIDDEN_LANGUAGE.test(value);
+  return (
+    typeof value === 'string' &&
+    value.trim().length >= minimum &&
+    value.trim().length <= maximum &&
+    !FORBIDDEN_LANGUAGE.test(value)
+  );
 }
 
 export function templateVisitNote(note: string, journeyId: unknown): VisitNote {
@@ -37,14 +44,28 @@ export function templateVisitNote(note: string, journeyId: unknown): VisitNote {
 export function parseVisitNote(value: unknown): Omit<VisitNote, 'source'> | null {
   if (!value || typeof value !== 'object') return null;
   const candidate = value as Partial<Omit<VisitNote, 'source'>>;
-  if (!isSafeText(candidate.summary) || !Array.isArray(candidate.questions) || candidate.questions.length !== 3 || !candidate.questions.every((question) => isSafeText(question, 8, 220))) return null;
+  if (
+    !isSafeText(candidate.summary) ||
+    !Array.isArray(candidate.questions) ||
+    candidate.questions.length !== 3 ||
+    !candidate.questions.every((question) => isSafeText(question, 8, 220))
+  )
+    return null;
   return {
     summary: candidate.summary.trim(),
-    questions: [candidate.questions[0].trim(), candidate.questions[1].trim(), candidate.questions[2].trim()],
+    questions: [
+      candidate.questions[0].trim(),
+      candidate.questions[1].trim(),
+      candidate.questions[2].trim(),
+    ],
   };
 }
 
-export function resolveVisitNote(note: unknown, journeyId: unknown, modelValue?: unknown): VisitNote | null {
+export function resolveVisitNote(
+  note: unknown,
+  journeyId: unknown,
+  modelValue?: unknown,
+): VisitNote | null {
   const normalised = normaliseVisitNote(note);
   if (!normalised) return null;
   const parsed = parseVisitNote(modelValue);

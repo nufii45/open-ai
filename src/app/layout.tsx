@@ -1,10 +1,15 @@
-import type { Metadata } from "next";
-import "@fontsource-variable/stack-sans-text/wght.css";
-import "./globals.css";
+import type { Metadata } from 'next';
+import '@fontsource-variable/stack-sans-text/wght.css';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "HealthBridge",
-  description: "Find generic alternatives and see your potential savings.",
+  title: 'HealthBridge',
+  description: 'Prepare, verify, and ask before your next care visit.',
+  icons: {
+    icon: [{ url: '/brand/healthbridge-mark.png?v=2', type: 'image/png' }],
+    shortcut: '/brand/healthbridge-mark.png?v=2',
+    apple: '/brand/healthbridge-mark.png?v=2',
+  },
 };
 
 export default function RootLayout({

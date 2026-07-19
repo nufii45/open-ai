@@ -8,7 +8,8 @@ const candidate = DRUG_COMPARISONS.find((record) => record.id === 'biogesic-para
 const today = new Date().toISOString().slice(0, 10);
 
 function verifiedFixture(overrides: Partial<DrugComparison> = {}): DrugComparison {
-  const signature = `${candidate.activeIngredient}|${candidate.strength}|${candidate.dosageForm}|${candidate.packQuantity} ${candidate.packUnit}`.toLowerCase();
+  const signature =
+    `${candidate.activeIngredient}|${candidate.strength}|${candidate.dosageForm}|${candidate.packQuantity} ${candidate.packUnit}`.toLowerCase();
   const evidence = {
     status: 'verified' as const,
     sourceName: 'Test pharmacy check',
@@ -60,9 +61,27 @@ describe('isValidComparison evidence gate', () => {
 
   it('rejects missing, pending, or mismatched comparison evidence', () => {
     const record = verifiedFixture();
-    expect(isValidComparison({ ...record, brandedEvidence: { ...record.brandedEvidence, reference: '' } })).toBe(false);
-    expect(isValidComparison({ ...record, genericEvidence: { ...record.genericEvidence, status: 'pending' } })).toBe(false);
-    expect(isValidComparison({ ...record, genericEvidence: { ...record.genericEvidence, matchSignature: 'paracetamol|250 mg|tablet|10 tablets' } })).toBe(false);
+    expect(
+      isValidComparison({
+        ...record,
+        brandedEvidence: { ...record.brandedEvidence, reference: '' },
+      }),
+    ).toBe(false);
+    expect(
+      isValidComparison({
+        ...record,
+        genericEvidence: { ...record.genericEvidence, status: 'pending' },
+      }),
+    ).toBe(false);
+    expect(
+      isValidComparison({
+        ...record,
+        genericEvidence: {
+          ...record.genericEvidence,
+          matchSignature: 'paracetamol|250 mg|tablet|10 tablets',
+        },
+      }),
+    ).toBe(false);
   });
 
   it('rejects stale evidence', () => {

@@ -65,7 +65,10 @@ export function PharmacyMap({
         />
         <FitMapBounds locations={locations} origin={origin} routeCoordinates={routeCoordinates} />
         {routePositions.length > 1 ? (
-          <Polyline positions={routePositions} pathOptions={{ color: '#1d4ed8', weight: 5, opacity: 0.86 }} />
+          <Polyline
+            positions={routePositions}
+            pathOptions={{ color: '#1d4ed8', weight: 5, opacity: 0.86 }}
+          />
         ) : null}
         {origin ? (
           <CircleMarker

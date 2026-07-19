@@ -104,7 +104,11 @@ export function useSavedMedicines() {
   }, []);
 
   const setPurchased = useCallback((id: string, isPurchased: boolean) => {
-    write(getSnapshot().map((medicine) => (medicine.id === id ? { ...medicine, isPurchased } : medicine)));
+    write(
+      getSnapshot().map((medicine) =>
+        medicine.id === id ? { ...medicine, isPurchased } : medicine,
+      ),
+    );
   }, []);
 
   const isSaved = useCallback((id: string) => saved.some((m) => m.id === id), [saved]);

@@ -21,7 +21,11 @@ export async function POST(request: NextRequest) {
 
   const journey = findCareJourney(journeyId);
   if (!journey) return NextResponse.json({ error: 'Unknown care journey.' }, { status: 404 });
-  if (!note) return NextResponse.json({ error: 'Write a short note (8–1,000 characters) first.' }, { status: 400 });
+  if (!note)
+    return NextResponse.json(
+      { error: 'Write a short note (8–1,000 characters) first.' },
+      { status: 400 },
+    );
 
   const fallback = templateVisitNote(note, journey.id);
   const apiKey = process.env.OPENAI_API_KEY;
@@ -42,7 +46,8 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'You prepare a non-clinical care-visit note. Use only the supplied user note; do not infer, add, or interpret medical facts. Do not diagnose, assess urgency, triage, prescribe, discuss dosage, recommend treatment, claim a medicine is safe, or give emergency instructions. Return JSON with exactly summary and questions. summary is one neutral sentence telling the person to share their own note. questions is exactly three short, practical questions for a clinician or pharmacist.',
+            content:
+              'You prepare a non-clinical care-visit note. Use only the supplied user note; do not infer, add, or interpret medical facts. Do not diagnose, assess urgency, triage, prescribe, discuss dosage, recommend treatment, claim a medicine is safe, or give emergency instructions. Return JSON with exactly summary and questions. summary is one neutral sentence telling the person to share their own note. questions is exactly three short, practical questions for a clinician or pharmacist.',
           },
           {
             role: 'user',
@@ -56,7 +61,11 @@ export async function POST(request: NextRequest) {
     const content = payload.choices?.[0]?.message?.content;
     if (!content) return NextResponse.json(fallback);
     let modelValue: unknown;
-    try { modelValue = JSON.parse(content); } catch { return NextResponse.json(fallback); }
+    try {
+      modelValue = JSON.parse(content);
+    } catch {
+      return NextResponse.json(fallback);
+    }
     return NextResponse.json(resolveVisitNote(note, journey.id, modelValue) ?? fallback);
   } catch {
     return NextResponse.json(fallback);

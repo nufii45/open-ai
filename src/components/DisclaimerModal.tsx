@@ -26,9 +26,9 @@ export function DisclaimerModal() {
           Before you start
         </h2>
         <p id="disclaimer-body" className="mt-2 text-sm leading-relaxed text-slate-600">
-          HealthBridge helps you prepare questions and practical checklists for a pharmacy,
-          clinic, laboratory, or discharge visit. It is not medical advice and does not diagnose,
-          prescribe, interpret results, or replace your care team.
+          HealthBridge helps you prepare questions and practical checklists for a pharmacy, clinic,
+          laboratory, or discharge visit. It is not medical advice and does not diagnose, prescribe,
+          interpret results, or replace your care team.
         </p>
         <Button className="mt-6 h-9 w-full" onClick={accept}>
           I understand — continue

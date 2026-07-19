@@ -18,7 +18,15 @@ function pendingEvidence(): PriceEvidence {
 }
 
 function draftComparison(
-  comparison: Omit<DrugComparison, 'brandedPriceSource' | 'genericPriceSource' | 'checkedOn' | 'brandedEvidence' | 'genericEvidence' | 'verified'>,
+  comparison: Omit<
+    DrugComparison,
+    | 'brandedPriceSource'
+    | 'genericPriceSource'
+    | 'checkedOn'
+    | 'brandedEvidence'
+    | 'genericEvidence'
+    | 'verified'
+  >,
 ): DrugComparison {
   return {
     ...comparison,
@@ -33,51 +41,91 @@ function draftComparison(
 
 export const DRUG_COMPARISONS: readonly DrugComparison[] = [
   draftComparison({
-    id: 'biogesic-paracetamol-500', brand: 'Biogesic', generic: 'Paracetamol',
-    aliases: ['biogesic 500', 'paracetamol', 'para'], activeIngredient: 'Paracetamol',
-    strength: '500 mg', dosageForm: 'Tablet', packQuantity: 10, packUnit: 'tablets',
-    brandedPrice: 46, genericPrice: 15, category: 'Pain & fever',
+    id: 'biogesic-paracetamol-500',
+    brand: 'Biogesic',
+    generic: 'Paracetamol',
+    aliases: ['biogesic 500', 'paracetamol', 'para'],
+    activeIngredient: 'Paracetamol',
+    strength: '500 mg',
+    dosageForm: 'Tablet',
+    packQuantity: 10,
+    packUnit: 'tablets',
+    brandedPrice: 46,
+    genericPrice: 15,
+    category: 'Pain & fever',
     indication: 'Commonly used for mild fever and everyday aches.',
     safetyFlag: 'Do not combine multiple paracetamol products at once.',
   }),
   draftComparison({
-    id: 'norvasc-amlodipine-5', brand: 'Norvasc', generic: 'Amlodipine',
-    aliases: ['norvasc 5', 'amlodipine', 'amlodipine besylate'], activeIngredient: 'Amlodipine besylate',
-    strength: '5 mg', dosageForm: 'Tablet', packQuantity: 30, packUnit: 'tablets',
-    brandedPrice: 1338, genericPrice: 118.5, category: 'Blood pressure',
+    id: 'norvasc-amlodipine-5',
+    brand: 'Norvasc',
+    generic: 'Amlodipine',
+    aliases: ['norvasc 5', 'amlodipine', 'amlodipine besylate'],
+    activeIngredient: 'Amlodipine besylate',
+    strength: '5 mg',
+    dosageForm: 'Tablet',
+    packQuantity: 30,
+    packUnit: 'tablets',
+    brandedPrice: 1338,
+    genericPrice: 118.5,
+    category: 'Blood pressure',
     indication: 'A maintenance medicine often prescribed for high blood pressure.',
     safetyFlag: 'A maintenance medicine — do not start or stop without your doctor.',
   }),
   draftComparison({
-    id: 'ponstan-mefenamic-500', brand: 'Ponstan', generic: 'Mefenamic acid',
-    aliases: ['ponstan 500', 'mefenamic', 'mefenamic acid', 'dolfenal'], activeIngredient: 'Mefenamic acid',
-    strength: '500 mg', dosageForm: 'Capsule', packQuantity: 10, packUnit: 'capsules',
-    brandedPrice: 279, genericPrice: 58, category: 'Pain relief',
+    id: 'ponstan-mefenamic-500',
+    brand: 'Ponstan',
+    generic: 'Mefenamic acid',
+    aliases: ['ponstan 500', 'mefenamic', 'mefenamic acid', 'dolfenal'],
+    activeIngredient: 'Mefenamic acid',
+    strength: '500 mg',
+    dosageForm: 'Capsule',
+    packQuantity: 10,
+    packUnit: 'capsules',
+    brandedPrice: 279,
+    genericPrice: 58,
+    category: 'Pain relief',
     indication: 'Commonly used for short-term relief of mild to moderate pain.',
     safetyFlag: 'Take with food; not for long-term use without advice.',
   }),
   draftComparison({
-    id: 'lipitor-atorvastatin-20', brand: 'Lipitor', generic: 'Atorvastatin',
-    aliases: ['lipitor 20', 'atorvastatin', 'atorva'], activeIngredient: 'Atorvastatin calcium',
-    strength: '20 mg', dosageForm: 'Tablet', packQuantity: 30, packUnit: 'tablets',
-    brandedPrice: 1678.5, genericPrice: 358.5, category: 'Cholesterol',
+    id: 'lipitor-atorvastatin-20',
+    brand: 'Lipitor',
+    generic: 'Atorvastatin',
+    aliases: ['lipitor 20', 'atorvastatin', 'atorva'],
+    activeIngredient: 'Atorvastatin calcium',
+    strength: '20 mg',
+    dosageForm: 'Tablet',
+    packQuantity: 30,
+    packUnit: 'tablets',
+    brandedPrice: 1678.5,
+    genericPrice: 358.5,
+    category: 'Cholesterol',
     indication: 'A maintenance medicine often prescribed to help manage cholesterol.',
     safetyFlag: 'A maintenance medicine — dose changes are decided by your doctor.',
   }),
   draftComparison({
-    id: 'glucophage-metformin-500', brand: 'Glucophage', generic: 'Metformin',
-    aliases: ['glucophage 500', 'metformin', 'metformin hcl'], activeIngredient: 'Metformin hydrochloride',
-    strength: '500 mg', dosageForm: 'Tablet', packQuantity: 100, packUnit: 'tablets',
-    brandedPrice: 895, genericPrice: 248, category: 'Blood sugar',
+    id: 'glucophage-metformin-500',
+    brand: 'Glucophage',
+    generic: 'Metformin',
+    aliases: ['glucophage 500', 'metformin', 'metformin hcl'],
+    activeIngredient: 'Metformin hydrochloride',
+    strength: '500 mg',
+    dosageForm: 'Tablet',
+    packQuantity: 100,
+    packUnit: 'tablets',
+    brandedPrice: 895,
+    genericPrice: 248,
+    category: 'Blood sugar',
     indication: 'A maintenance medicine often prescribed to help manage blood sugar.',
     safetyFlag: 'A maintenance medicine — do not adjust the dose on your own.',
   }),
 ];
 
 /** Brand names shown as popular chips once their evidence is verified. */
-export const POPULAR_BRANDS: readonly string[] = DRUG_COMPARISONS
-  .filter((comparison) => comparison.verified)
-  .map((comparison) => comparison.brand);
+export const POPULAR_BRANDS: readonly string[] = DRUG_COMPARISONS.filter(
+  (comparison) => comparison.verified,
+).map((comparison) => comparison.brand);
 
 export function findComparisonById(id: string): DrugComparison | null {
   return DRUG_COMPARISONS.find((comparison) => comparison.id === id) ?? null;

@@ -41,7 +41,8 @@ async function generateBrief(comparison: DrugComparison, apiKey: string): Promis
         messages: [
           {
             role: 'system',
-            content: 'Write only a pharmacist-ready comparison brief from the supplied catalog facts. Do not diagnose, prescribe, recommend a dose, discuss contraindications, or say a person should switch medicine. Do not add facts not supplied. Keep the question focused on confirming ingredient, strength, dosage form, and pack.',
+            content:
+              'Write only a pharmacist-ready comparison brief from the supplied catalog facts. Do not diagnose, prescribe, recommend a dose, discuss contraindications, or say a person should switch medicine. Do not add facts not supplied. Keep the question focused on confirming ingredient, strength, dosage form, and pack.',
           },
           {
             role: 'user',
@@ -76,19 +77,25 @@ export async function POST(request: Request) {
     // Invalid input returns a safe request error below.
   }
 
-  if (!comparisonId) return NextResponse.json({ error: 'A comparison ID is required.' }, { status: 400 });
+  if (!comparisonId)
+    return NextResponse.json({ error: 'A comparison ID is required.' }, { status: 400 });
 
   const apiKey = process.env.OPENAI_API_KEY;
   const result = await resolvePharmacistBrief(
     comparisonId,
-    apiKey ? (comparison) => generateBrief(comparison, apiKey) : async () => {
-      throw new Error('OpenAI is not configured');
-    },
+    apiKey
+      ? (comparison) => generateBrief(comparison, apiKey)
+      : async () => {
+          throw new Error('OpenAI is not configured');
+        },
   );
 
   if (result.status === 'not_found') return NextResponse.json(result, { status: 404 });
   if (result.status === 'not_verified') {
-    return NextResponse.json({ ...result, error: 'This comparison has no current verified price evidence.' }, { status: 409 });
+    return NextResponse.json(
+      { ...result, error: 'This comparison has no current verified price evidence.' },
+      { status: 409 },
+    );
   }
   return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } });
 }

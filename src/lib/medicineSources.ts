@@ -1,5 +1,10 @@
-export const PHILIPPINE_FDA_DRUG_SEARCH_URL = 'https://verification.fda.gov.ph/drug_productslist.php';
-export const OFFICIAL_MEDICINE_SEARCH_DOMAINS = ['verification.fda.gov.ph', 'open.fda.gov', 'lhncbc.nlm.nih.gov'] as const;
+export const PHILIPPINE_FDA_DRUG_SEARCH_URL =
+  'https://verification.fda.gov.ph/drug_productslist.php';
+export const OFFICIAL_MEDICINE_SEARCH_DOMAINS = [
+  'verification.fda.gov.ph',
+  'open.fda.gov',
+  'lhncbc.nlm.nih.gov',
+] as const;
 
 export const MEDICINE_REFERENCE_SOURCES = {
   local: {

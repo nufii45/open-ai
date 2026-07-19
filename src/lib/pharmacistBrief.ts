@@ -19,10 +19,16 @@ export type PharmacistBriefResult =
 
 export type BriefGenerator = (comparison: DrugComparison) => Promise<unknown>;
 
-const UNSAFE_LANGUAGE = /\b(diagnos(?:is|e)|prescrib(?:e|ed)|dosage|dose|start|stop|safe to switch|contraindicat)/i;
+const UNSAFE_LANGUAGE =
+  /\b(diagnos(?:is|e)|prescrib(?:e|ed)|dosage|dose|start|stop|safe to switch|contraindicat)/i;
 
 function isSafeText(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0 && value.length <= 500 && !UNSAFE_LANGUAGE.test(value);
+  return (
+    typeof value === 'string' &&
+    value.trim().length > 0 &&
+    value.length <= 500 &&
+    !UNSAFE_LANGUAGE.test(value)
+  );
 }
 
 export function createTemplateBrief(comparison: DrugComparison): PharmacistBrief {
@@ -42,7 +48,12 @@ export function parsePharmacistBrief(raw: unknown): PharmacistBrief | null {
   if (!raw || typeof raw !== 'object') return null;
   const value = raw as Record<string, unknown>;
   if (!isSafeText(value.summary) || !isSafeText(value.pharmacistQuestion)) return null;
-  if (!Array.isArray(value.checklist) || value.checklist.length !== 3 || !value.checklist.every(isSafeText)) return null;
+  if (
+    !Array.isArray(value.checklist) ||
+    value.checklist.length !== 3 ||
+    !value.checklist.every(isSafeText)
+  )
+    return null;
 
   return {
     summary: value.summary.trim(),

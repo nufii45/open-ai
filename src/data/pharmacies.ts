@@ -14,12 +14,48 @@ export interface Pharmacy {
 export const ORIGIN = { lat: 14.6394, lng: 121.0779 } as const;
 
 export const pharmacies: Pharmacy[] = [
-  { name: "Mercury Drug — Katipunan", chain: "Mercury Drug", address: "Katipunan Ave, Loyola Heights, Quezon City", lat: 14.6355, lng: 121.0733 },
-  { name: "The Generics Pharmacy — Katipunan", chain: "The Generics Pharmacy", address: "Katipunan Ave, Loyola Heights, Quezon City", lat: 14.6368, lng: 121.0728 },
-  { name: "Watsons — UP Town Center", chain: "Watsons", address: "Katipunan Ave, Diliman, Quezon City", lat: 14.6541, lng: 121.0686 },
-  { name: "Southstar Drug — Xavierville", chain: "Southstar Drug", address: "Xavierville Ave, Loyola Heights, Quezon City", lat: 14.6421, lng: 121.0801 },
-  { name: "Rose Pharmacy — Katipunan", chain: "Rose Pharmacy", address: "Katipunan Ave, Blue Ridge, Quezon City", lat: 14.6289, lng: 121.0736 },
-  { name: "Mercury Drug — Blue Ridge", chain: "Mercury Drug", address: "Katipunan Ave, Blue Ridge A, Quezon City", lat: 14.6262, lng: 121.0721 },
+  {
+    name: 'Mercury Drug — Katipunan',
+    chain: 'Mercury Drug',
+    address: 'Katipunan Ave, Loyola Heights, Quezon City',
+    lat: 14.6355,
+    lng: 121.0733,
+  },
+  {
+    name: 'The Generics Pharmacy — Katipunan',
+    chain: 'The Generics Pharmacy',
+    address: 'Katipunan Ave, Loyola Heights, Quezon City',
+    lat: 14.6368,
+    lng: 121.0728,
+  },
+  {
+    name: 'Watsons — UP Town Center',
+    chain: 'Watsons',
+    address: 'Katipunan Ave, Diliman, Quezon City',
+    lat: 14.6541,
+    lng: 121.0686,
+  },
+  {
+    name: 'Southstar Drug — Xavierville',
+    chain: 'Southstar Drug',
+    address: 'Xavierville Ave, Loyola Heights, Quezon City',
+    lat: 14.6421,
+    lng: 121.0801,
+  },
+  {
+    name: 'Rose Pharmacy — Katipunan',
+    chain: 'Rose Pharmacy',
+    address: 'Katipunan Ave, Blue Ridge, Quezon City',
+    lat: 14.6289,
+    lng: 121.0736,
+  },
+  {
+    name: 'Mercury Drug — Blue Ridge',
+    chain: 'Mercury Drug',
+    address: 'Katipunan Ave, Blue Ridge A, Quezon City',
+    lat: 14.6262,
+    lng: 121.0721,
+  },
 ];
 
 export interface PharmacyWithDistance extends Pharmacy {
