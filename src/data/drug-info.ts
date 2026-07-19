@@ -17,40 +17,37 @@ export interface DrugInfo {
 // queried as-is. (Verified against api.fda.gov: `salbutamol` and `paracetamol`
 // return nothing; their US names `albuterol` / `acetaminophen` return live labels.)
 export const PH_TO_US_NAME: Record<string, string> = {
-  paracetamol: "acetaminophen",
-  salbutamol: "albuterol",
+  paracetamol: 'acetaminophen',
+  salbutamol: 'albuterol',
 };
 
 // Pre-written cached blurbs for the demo drugs (keyed by PH generic in drugs.ts).
 export const drugInfoCache: Record<string, DrugInfo> = {
   atorvastatin: {
-    indication:
-      "Lowers LDL (“bad”) cholesterol to reduce the risk of heart attack and stroke.",
+    indication: 'Lowers LDL (“bad”) cholesterol to reduce the risk of heart attack and stroke.',
     warning:
-      "May rarely cause muscle pain or weakness — report any unexplained muscle symptoms to a doctor.",
+      'May rarely cause muscle pain or weakness — report any unexplained muscle symptoms to a doctor.',
   },
   amlodipine: {
-    indication: "Treats high blood pressure and certain types of chest pain (angina).",
-    warning:
-      "Can cause dizziness or ankle swelling; stand up slowly when you first start it.",
+    indication: 'Treats high blood pressure and certain types of chest pain (angina).',
+    warning: 'Can cause dizziness or ankle swelling; stand up slowly when you first start it.',
   },
   salbutamol: {
     indication:
-      "Relieves and prevents wheezing and shortness of breath in asthma and other airway conditions.",
-    warning:
-      "Needing it more often than usual can signal worsening asthma — seek medical help.",
+      'Relieves and prevents wheezing and shortness of breath in asthma and other airway conditions.',
+    warning: 'Needing it more often than usual can signal worsening asthma — seek medical help.',
   },
   paracetamol: {
-    indication: "Temporarily relieves minor aches, pains, and fever.",
+    indication: 'Temporarily relieves minor aches, pains, and fever.',
     warning:
-      "Exceeding the recommended dose can cause severe liver damage; don’t combine paracetamol products.",
+      'Exceeding the recommended dose can cause severe liver damage; don’t combine paracetamol products.',
   },
 };
 
 // Last-resort blurb when a generic has no cached entry and the live call fails.
 export const DEFAULT_DRUG_INFO: DrugInfo = {
-  indication: "General usage information isn’t available offline for this medicine.",
-  warning: "Always follow the dose on the label and check with a pharmacist or doctor.",
+  indication: 'General usage information isn’t available offline for this medicine.',
+  warning: 'Always follow the dose on the label and check with a pharmacist or doctor.',
 };
 
 // Resolve the cached blurb for a PH generic, falling back to the default.

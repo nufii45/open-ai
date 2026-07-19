@@ -46,7 +46,9 @@ export function PharmacyList({
         <h3 id="pharmacies-heading" className="text-sm font-semibold text-slate-700">
           {hasNearbyResults ? 'Nearby care map results' : 'Suggested locations'}
         </h3>
-        <span className="text-xs text-slate-500">{hasNearbyResults ? 'Map data only' : 'Illustrative only'}</span>
+        <span className="text-xs text-slate-500">
+          {hasNearbyResults ? 'Map data only' : 'Illustrative only'}
+        </span>
       </div>
       <p className="mb-2.5 text-xs leading-5 text-slate-500">
         {rankings.length
@@ -58,42 +60,42 @@ export function PharmacyList({
           const ranking = rankingByPharmacyId.get(pharmacy.id);
           const isSelected = pharmacy.id === selectedPharmacyId;
           return (
-          <li
-            key={pharmacy.id}
-            className="flex items-center justify-between gap-3 py-3"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-slate-900">{pharmacy.name}</p>
-              <p className="truncate text-xs text-slate-500">{pharmacy.branch}</p>
-              {ranking ? (
-                <p className="mt-0.5 text-xs font-medium text-teal-800">
-                  {formatDistance(ranking.distanceMeters)} · about {formatDuration(ranking.durationSeconds)} by {travelMode}
-                </p>
-              ) : (
-                <p className="mt-0.5 text-xs text-slate-500">{pharmacy.label} · confirm stock &amp; price</p>
-              )}
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <button
-                type="button"
-                onClick={() => onSelectPharmacy(pharmacy.id)}
-                aria-pressed={isSelected}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-3 text-sm font-medium text-teal-800 transition-[background-color,transform] duration-200 ease-out hover:bg-teal-100 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:transform-none"
-              >
-                <Route aria-hidden="true" className="size-4" />
-                {isSelected ? 'Showing route' : 'Show route'}
-              </button>
-              <a
-                href={pharmacy.directionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-8 items-center gap-1 text-xs font-medium text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
-              >
-                <MapPin aria-hidden="true" className="size-3.5" />
-                Open Maps
-              </a>
-            </div>
-          </li>
+            <li key={pharmacy.id} className="flex items-center justify-between gap-3 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-slate-900">{pharmacy.name}</p>
+                <p className="truncate text-xs text-slate-500">{pharmacy.branch}</p>
+                {ranking ? (
+                  <p className="mt-0.5 text-xs font-medium text-teal-800">
+                    {formatDistance(ranking.distanceMeters)} · about{' '}
+                    {formatDuration(ranking.durationSeconds)} by {travelMode}
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {pharmacy.label} · confirm stock &amp; price
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => onSelectPharmacy(pharmacy.id)}
+                  aria-pressed={isSelected}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-3 text-sm font-medium text-teal-800 transition-[background-color,transform] duration-200 ease-out hover:bg-teal-100 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:transform-none"
+                >
+                  <Route aria-hidden="true" className="size-4" />
+                  {isSelected ? 'Showing route' : 'Show route'}
+                </button>
+                <a
+                  href={pharmacy.directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-8 items-center gap-1 text-xs font-medium text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
+                >
+                  <MapPin aria-hidden="true" className="size-3.5" />
+                  Open Maps
+                </a>
+              </div>
+            </li>
           );
         })}
       </ul>

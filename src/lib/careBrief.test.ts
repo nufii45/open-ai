@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { CARE_SAFETY_REMINDER, parseCareBrief, parseRelayLine, resolveCareBrief, resolveCareBriefResponse, templateCareBrief, templateCareRelay } from './careBrief';
+import {
+  CARE_SAFETY_REMINDER,
+  parseCareBrief,
+  parseRelayLine,
+  resolveCareBrief,
+  resolveCareBriefResponse,
+  templateCareBrief,
+  templateCareRelay,
+} from './careBrief';
 import { findCareJourney } from './careJourneys';
 
 describe('care visit brief', () => {
@@ -14,15 +22,33 @@ describe('care visit brief', () => {
   });
 
   it('accepts a structured care-preparation response', () => {
-    expect(parseCareBrief({ summary: 'Bring your appointment details.', primaryQuestion: 'What should I write down before I leave?', checklist: ['Bring your ID.', 'Confirm the appointment time.', 'Ask where to follow up.'] })).not.toBeNull();
+    expect(
+      parseCareBrief({
+        summary: 'Bring your appointment details.',
+        primaryQuestion: 'What should I write down before I leave?',
+        checklist: ['Bring your ID.', 'Confirm the appointment time.', 'Ask where to follow up.'],
+      }),
+    ).not.toBeNull();
   });
 
   it('rejects clinical or treatment language from a model response', () => {
-    expect(parseCareBrief({ summary: 'You should start taking this.', primaryQuestion: 'What dose should I take?', checklist: ['One', 'Two', 'Three'] })).toBeNull();
+    expect(
+      parseCareBrief({
+        summary: 'You should start taking this.',
+        primaryQuestion: 'What dose should I take?',
+        checklist: ['One', 'Two', 'Three'],
+      }),
+    ).toBeNull();
   });
 
   it('falls back for invalid output and rejects an unknown journey', () => {
-    expect(resolveCareBrief('pharmacy', { summary: 'diagnosis', primaryQuestion: 'question', checklist: ['a', 'b', 'c'] })?.source).toBe('template');
+    expect(
+      resolveCareBrief('pharmacy', {
+        summary: 'diagnosis',
+        primaryQuestion: 'question',
+        checklist: ['a', 'b', 'c'],
+      })?.source,
+    ).toBe('template');
     expect(resolveCareBrief('not-a-journey')).toBeNull();
   });
 
@@ -35,7 +61,16 @@ describe('care visit brief', () => {
 
   it('keeps the canonical brief and rejects unsafe generated relay language', () => {
     expect(parseRelayLine('You should start taking this dose today.')).toBeNull();
-    const response = resolveCareBriefResponse('pharmacy', { language: 'en', audience: 'self' }, { summary: 'Bring your medicine pack.', primaryQuestion: 'Can you help me confirm the pack?', checklist: ['One', 'Two', 'Three'], relayLine: 'Please prescribe a dose.' });
+    const response = resolveCareBriefResponse(
+      'pharmacy',
+      { language: 'en', audience: 'self' },
+      {
+        summary: 'Bring your medicine pack.',
+        primaryQuestion: 'Can you help me confirm the pack?',
+        checklist: ['One', 'Two', 'Three'],
+        relayLine: 'Please prescribe a dose.',
+      },
+    );
     expect(response?.relay.source).toBe('template');
     expect(response?.checklist).toEqual(findCareJourney('pharmacy')?.preparation);
   });

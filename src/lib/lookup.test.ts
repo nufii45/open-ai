@@ -6,7 +6,11 @@ import { computeSavings, isValidComparison } from './savings';
 
 describe('lookupLocal', () => {
   it('does not expose draft catalog prices as verified results', () => {
-    expect(lookupLocal('Biogesic')).toEqual({ status: 'not_verified', query: 'Biogesic', reason: 'draft_evidence' });
+    expect(lookupLocal('Biogesic')).toEqual({
+      status: 'not_verified',
+      query: 'Biogesic',
+      reason: 'draft_evidence',
+    });
   });
 
   it('marks unknown and empty input as not verified without inventing a price', () => {

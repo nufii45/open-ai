@@ -7,7 +7,7 @@ It is deliberately **not** a diagnosis, prescription, symptom checker, emergency
 ## Product flow
 
 1. Choose a care visit: pharmacy, clinic, laboratory, or discharge.
-2. For a pharmacy visit, use the local Medicine Counter Check and enter the prices you personally observe for a matching pack.
+2. For a pharmacy visit, use the local Medicine Counter Check. The scan-first path captures two physical packages, compares the reviewed ingredient, strength, form, and pack fields deterministically, then unlocks observed-price comparison only when they match. An optional price-label capture can only prefill a visibly printed PHP amount for your review.
 3. HealthBridge deterministically verifies the observed pack and calculates any price difference; GPT-5.6 explains only the supplied result and creates a pharmacist question.
 4. If a local medicine is unavailable, optionally search two public reference sources: NLM RxNorm for normalized-name candidates and openFDA for a **possible US-label identity**. Only after both return no candidate may the user opt into one GPT-5.6 web search restricted to official Philippine FDA, openFDA, and NLM domains. None of these paths create a Philippine price, equivalent, or switching recommendation. For Philippine registration details, open the official Philippine FDA Verification Portal and confirm the physical package with a pharmacist.
 5. Optionally type or dictate a temporary visit note. Dictation is browser-provided and remains editable; with explicit consent, GPT-5.6 turns only the user's own words into practical questions to bring to a professional.
@@ -19,6 +19,8 @@ It is deliberately **not** a diagnosis, prescription, symptom checker, emergency
 The app does not store symptoms, diagnoses, allergies, prescription history, laboratory results, audio, or the temporary visit note. A visitor may voluntarily send a short free-text note to the AI only after an explicit consent checkbox; it is used for that response and never included in the saved local plan. Do not enter names, addresses, or identification numbers.
 
 Observed prices are used for a one-time comparison only. They are not stored, published as a price catalog, or presented as a market-wide quote.
+
+`POST /api/pack-scan` and `POST /api/price-label-scan` use GPT-5.6 Terra vision only to transcribe visible package or price-label text. Every extracted value is editable, a price must be explicitly identified as PHP, and no image is persisted by HealthBridge. The application rejects unreadable, unsafe, non-PHP, or medical-advice output and always preserves manual entry as the fallback.
 
 ## AI boundary
 

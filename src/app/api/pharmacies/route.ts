@@ -9,16 +9,16 @@
 // - Mandatory fallback to cached pharmacies.ts on timeout / quota / bad key / empty.
 //   Responses are tagged source: "live" or source: "cached". The card never renders empty.
 
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 import {
   ORIGIN,
   nearestPharmacies,
   type Pharmacy,
   type PharmacyWithDistance,
-} from "@/data/pharmacies";
+} from '@/data/pharmacies';
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const SEARCH_RADIUS_M = 4000; // 4km around the fixed origin
 const RESULT_COUNT = 3;
@@ -39,22 +39,21 @@ function distanceKm(to: { lat: number; lng: number }): number {
 
 function cached() {
   return NextResponse.json({
-    source: "cached" as const,
+    source: 'cached' as const,
     pharmacies: nearestPharmacies(RESULT_COUNT),
   });
 }
 
 async function livePharmacies(apiKey: string): Promise<PharmacyWithDistance[] | null> {
-  const res = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
-    method: "POST",
+  const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask":
-        "places.displayName,places.formattedAddress,places.location",
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location',
     },
     body: JSON.stringify({
-      includedTypes: ["pharmacy"],
+      includedTypes: ['pharmacy'],
       maxResultCount: 10,
       locationRestriction: {
         circle: {
@@ -73,12 +72,12 @@ async function livePharmacies(apiKey: string): Promise<PharmacyWithDistance[] | 
   for (const p of places as Record<string, unknown>[]) {
     const loc = p?.location as { latitude?: number; longitude?: number } | undefined;
     const name = (p?.displayName as { text?: string } | undefined)?.text;
-    if (!loc || typeof loc.latitude !== "number" || typeof loc.longitude !== "number") continue;
+    if (!loc || typeof loc.latitude !== 'number' || typeof loc.longitude !== 'number') continue;
     if (!name) continue;
     const base: Pharmacy = {
       name,
       chain: name,
-      address: typeof p?.formattedAddress === "string" ? p.formattedAddress : "",
+      address: typeof p?.formattedAddress === 'string' ? p.formattedAddress : '',
       lat: loc.latitude,
       lng: loc.longitude,
     };
@@ -96,7 +95,7 @@ export async function GET(): Promise<NextResponse> {
   try {
     const live = await livePharmacies(apiKey);
     if (!live) return cached();
-    return NextResponse.json({ source: "live" as const, pharmacies: live });
+    return NextResponse.json({ source: 'live' as const, pharmacies: live });
   } catch {
     return cached(); // timeout / network / parse — cached list, never empty
   }

@@ -30,7 +30,12 @@ function isFreshIsoDate(value: string | null): value is string {
 }
 
 function comparisonSignature(record: DrugComparison): string {
-  return [record.activeIngredient, record.strength, record.dosageForm, `${record.packQuantity} ${record.packUnit}`]
+  return [
+    record.activeIngredient,
+    record.strength,
+    record.dosageForm,
+    `${record.packQuantity} ${record.packUnit}`,
+  ]
     .map((part) => part.trim().toLowerCase())
     .join('|');
 }
@@ -48,7 +53,8 @@ export function isValidComparison(record: DrugComparison): boolean {
   if (!isPositiveFinite(record.packQuantity)) return false;
   if (record.genericPrice >= record.brandedPrice) return false; // no saving to show
   if (!record.brandedPriceSource || !record.genericPriceSource) return false;
-  if (record.brandedEvidence.status !== 'verified' || record.genericEvidence.status !== 'verified') return false;
+  if (record.brandedEvidence.status !== 'verified' || record.genericEvidence.status !== 'verified')
+    return false;
   if (!record.brandedEvidence.reference || !record.genericEvidence.reference) return false;
   const signature = comparisonSignature(record);
   if (record.brandedEvidence.matchSignature.trim().toLowerCase() !== signature) return false;

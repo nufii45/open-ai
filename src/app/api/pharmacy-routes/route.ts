@@ -35,12 +35,12 @@ const pharmacyLocationCache = new Map<string, PharmacyMapLocation>();
 function validCoordinates(point: Coordinates | undefined): point is Coordinates {
   return Boolean(
     point &&
-      Number.isFinite(point.latitude) &&
-      Number.isFinite(point.longitude) &&
-      point.latitude >= -90 &&
-      point.latitude <= 90 &&
-      point.longitude >= -180 &&
-      point.longitude <= 180,
+    Number.isFinite(point.latitude) &&
+    Number.isFinite(point.longitude) &&
+    point.latitude >= -90 &&
+    point.latitude <= 90 &&
+    point.longitude >= -180 &&
+    point.longitude <= 180,
   );
 }
 
@@ -57,8 +57,10 @@ function validDestination(value: unknown): value is RouteDestination {
     typeof item.branch === 'string' &&
     Number.isFinite(item.latitude) &&
     Number.isFinite(item.longitude) &&
-    item.latitude! >= -90 && item.latitude! <= 90 &&
-    item.longitude! >= -180 && item.longitude! <= 180
+    item.latitude! >= -90 &&
+    item.latitude! <= 90 &&
+    item.longitude! >= -180 &&
+    item.longitude! <= 180
   );
 }
 
@@ -150,21 +152,33 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const requestedDestinations = Array.isArray(body.destinations) ? body.destinations.filter(validDestination).slice(0, 10) : [];
+    const requestedDestinations = Array.isArray(body.destinations)
+      ? body.destinations.filter(validDestination).slice(0, 10)
+      : [];
     const destinations: RouteDestination[] = requestedDestinations.length
       ? requestedDestinations
-      : (await Promise.all(NEAREST_SAMPLE_PHARMACIES.map((pharmacy) => geocodePharmacy(pharmacy, apiKey)))).map((location) => {
-          const pharmacy = NEAREST_SAMPLE_PHARMACIES.find((item) => item.id === location.pharmacyId)!;
+      : (
+          await Promise.all(
+            NEAREST_SAMPLE_PHARMACIES.map((pharmacy) => geocodePharmacy(pharmacy, apiKey)),
+          )
+        ).map((location) => {
+          const pharmacy = NEAREST_SAMPLE_PHARMACIES.find(
+            (item) => item.id === location.pharmacyId,
+          )!;
           return { ...location, name: pharmacy.name, branch: pharmacy.branch };
         });
-    const locations: PharmacyMapLocation[] = destinations.map(({ pharmacyId, latitude, longitude }) => ({ pharmacyId, latitude, longitude }));
+    const locations: PharmacyMapLocation[] = destinations.map(
+      ({ pharmacyId, latitude, longitude }) => ({ pharmacyId, latitude, longitude }),
+    );
     const matrixResponse = await fetch(`https://api.geoapify.com/v1/routematrix?apiKey=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         mode: body.mode,
         sources: [{ location: [body.origin.longitude, body.origin.latitude] }],
-        targets: locations.map((location) => ({ location: [location.longitude, location.latitude] })),
+        targets: locations.map((location) => ({
+          location: [location.longitude, location.latitude],
+        })),
       }),
       cache: 'no-store',
     });
@@ -186,11 +200,16 @@ export async function POST(request: NextRequest) {
       }
       return [{ pharmacyId: location.pharmacyId, distanceMeters, durationSeconds }];
     });
-    rankings.sort((a, b) => a.durationSeconds - b.durationSeconds || a.distanceMeters - b.distanceMeters);
+    rankings.sort(
+      (a, b) => a.durationSeconds - b.durationSeconds || a.distanceMeters - b.distanceMeters,
+    );
 
-    const routeTarget = destinations.find((pharmacy) => pharmacy.pharmacyId === body.selectedPharmacyId) ??
-      destinations.find((pharmacy) => pharmacy.pharmacyId === rankings[0]?.pharmacyId) ?? null;
-    const targetLocation = locations.find((location) => location.pharmacyId === routeTarget?.pharmacyId) ?? null;
+    const routeTarget =
+      destinations.find((pharmacy) => pharmacy.pharmacyId === body.selectedPharmacyId) ??
+      destinations.find((pharmacy) => pharmacy.pharmacyId === rankings[0]?.pharmacyId) ??
+      null;
+    const targetLocation =
+      locations.find((location) => location.pharmacyId === routeTarget?.pharmacyId) ?? null;
     if (!routeTarget || !targetLocation) throw new Error('No route destinations are available.');
 
     const routeUrl = new URL('https://api.geoapify.com/v1/routing');
@@ -217,7 +236,10 @@ export async function POST(request: NextRequest) {
     );
   } catch {
     return NextResponse.json(
-      { error: 'Route estimates are unavailable right now. You can still open the sample locations in Maps.' },
+      {
+        error:
+          'Route estimates are unavailable right now. You can still open the sample locations in Maps.',
+      },
       { status: 502, headers: { 'Cache-Control': 'no-store' } },
     );
   }
