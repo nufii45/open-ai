@@ -7,6 +7,20 @@
  * and generic on active ingredient, strength, dosage form, and pack quantity,
  * and carries positive PHP prices with a source and check date for each.
  */
+export type EvidenceStatus = 'pending' | 'verified';
+
+/** A human-collected PHP price observation for one matching medicine pack. */
+export type PriceEvidence = {
+  status: EvidenceStatus;
+  sourceName: string;
+  /** Public source URL or a team-held receipt/screenshot reference. */
+  reference: string;
+  observedOn: string | null;
+  packDescription: string;
+  /** Active ingredient, strength, form, and pack captured at the source. */
+  matchSignature: string;
+};
+
 export type DrugComparison = {
   id: string;
   brand: string;
@@ -22,9 +36,12 @@ export type DrugComparison = {
   genericPrice: number;
   brandedPriceSource: string;
   genericPriceSource: string;
-  checkedOn: string; // ISO date
+  checkedOn: string | null; // ISO date; newest common evidence check
+  brandedEvidence: PriceEvidence;
+  genericEvidence: PriceEvidence;
   category: string;
-  verified: true;
+  /** Only true after a human has checked both matching packs. */
+  verified: boolean;
   indication?: string; // pre-reviewed only
   safetyFlag?: string; // pre-reviewed only
 };
@@ -73,6 +90,7 @@ export type VerifiedLookup = {
 export type NotVerifiedLookup = {
   status: 'not_verified';
   query: string;
+  reason: 'draft_evidence' | 'unknown';
 };
 
 export type LookupOutcome = VerifiedLookup | NotVerifiedLookup;

@@ -4,6 +4,7 @@ import { Check, MapPin, Plus, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
 import { PharmacyLocator } from '@/components/PharmacyLocator';
+import { PharmacistBrief } from '@/components/PharmacistBrief';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { NEAREST_SAMPLE_PHARMACIES } from '@/lib/pharmacies';
@@ -28,9 +29,9 @@ export function ResultCard({ result, isSaved, onSave }: ResultCardProps) {
   const isEstimated = source === 'openai';
   const monthlySavings = savings.savings * packsPerMonth;
   const annualSavings = monthlySavings * 12;
-  const priceCheckedOn = new Intl.DateTimeFormat('en-PH', {
+  const priceCheckedOn = comparison.checkedOn ? new Intl.DateTimeFormat('en-PH', {
     day: 'numeric', month: 'short', year: 'numeric',
-  }).format(new Date(`${comparison.checkedOn}T00:00:00`));
+  }).format(new Date(`${comparison.checkedOn}T00:00:00`)) : null;
 
   const tabs: Array<{ id: ResultTab; label: string; icon: typeof Sparkles }> = [
     { id: 'compare', label: 'Compare', icon: Sparkles },
@@ -109,12 +110,22 @@ export function ResultCard({ result, isSaved, onSave }: ResultCardProps) {
               <div><dt className="text-[11px] uppercase tracking-wide text-slate-500">Pack</dt><dd className="text-sm font-medium text-slate-900">{comparison.packQuantity} {comparison.packUnit}</dd></div>
             </dl>
 
+            <section aria-label="Comparison evidence" className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Evidence for this matching pack</p>
+              <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                <p><span className="font-medium text-slate-900">Brand source:</span> {comparison.brandedEvidence.sourceName}</p>
+                <p><span className="font-medium text-slate-900">Generic source:</span> {comparison.genericEvidence.sourceName}</p>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-600">Same active ingredient, strength, dosage form, and pack. {priceCheckedOn ? `Checked on ${priceCheckedOn}.` : 'Current evidence date unavailable.'}</p>
+            </section>
+
             {comparison.indication ? <p className="text-sm text-slate-600">{comparison.indication}</p> : null}
             {comparison.safetyFlag ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{comparison.safetyFlag}</p> : null}
             <div className="border-t border-slate-200 pt-4">
               <p className="text-sm leading-6 text-slate-700">{SAFETY_NOTE}</p>
-              <p className="mt-3 text-xs text-slate-500">Prices checked on {priceCheckedOn}.</p>
+              <p className="mt-3 text-xs text-slate-500">{priceCheckedOn ? `Prices checked on ${priceCheckedOn}.` : 'Price evidence date unavailable.'}</p>
             </div>
+            <PharmacistBrief comparisonId={comparison.id} />
           </div>
         ) : null}
 
