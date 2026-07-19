@@ -151,7 +151,7 @@ export function ResultCard({ result, isSaved, onSave }: ResultCardProps) {
           </section>
         ) : null}
 
-        {activeTab === 'pharmacies' ? <PharmacyLocator pharmacies={NEAREST_SAMPLE_PHARMACIES} /> : null}
+        {activeTab === 'pharmacies' ? <PharmacyLocator pharmacies={NEAREST_SAMPLE_PHARMACIES} category="pharmacy" /> : null}
       </div>
 
       <div className="border-t border-slate-100 bg-slate-50/70 p-5 sm:px-6">

@@ -44,14 +44,14 @@ export function PharmacyList({
     <section aria-labelledby="pharmacies-heading">
       <div className="mb-2.5 flex items-baseline justify-between gap-2">
         <h3 id="pharmacies-heading" className="text-sm font-semibold text-slate-700">
-          {hasNearbyResults ? 'Nearby pharmacy map results' : 'Suggested drugstores'}
+          {hasNearbyResults ? 'Nearby care map results' : 'Suggested locations'}
         </h3>
         <span className="text-xs text-slate-500">{hasNearbyResults ? 'Map data only' : 'Illustrative only'}</span>
       </div>
       <p className="mb-2.5 text-xs leading-5 text-slate-500">
         {rankings.length
-          ? `Sorted by estimated ${travelMode} route. No live stock, price, or hours information.`
-          : 'Share a location above to find nearby map results. No live stock, price, or hours information.'}
+          ? `Sorted by estimated ${travelMode} route. No live service, price, or hours information.`
+          : 'Share a location above to find nearby map results. No live service, price, or hours information.'}
       </p>
       <ul className="divide-y divide-slate-200 border-y border-slate-200">
         {orderedPharmacies.map((pharmacy) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ClipboardCopy, MessageCircleQuestion, Sparkles } from 'lucide-react';
+import { Check, ClipboardCopy, MessageCircleQuestion, MessageCircleQuestion as Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
