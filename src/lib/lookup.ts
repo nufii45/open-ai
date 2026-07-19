@@ -26,9 +26,25 @@ const INDEX: Map<string, DrugComparison> = (() => {
   return map;
 })();
 
+const CANDIDATE_INDEX: Map<string, DrugComparison> = (() => {
+  const map = new Map<string, DrugComparison>();
+  for (const record of DRUG_COMPARISONS) {
+    const keys = [record.brand, record.generic, record.activeIngredient, ...record.aliases];
+    for (const key of keys) {
+      const norm = normalize(key);
+      if (norm && !map.has(norm)) map.set(norm, record);
+    }
+  }
+  return map;
+})();
+
 /** Find a curated record by exact normalized brand/generic/alias key. */
 export function findComparison(query: string): DrugComparison | null {
   return INDEX.get(normalize(query)) ?? null;
+}
+
+export function findCatalogCandidate(query: string): DrugComparison | null {
+  return CANDIDATE_INDEX.get(normalize(query)) ?? null;
 }
 
 /** Wrap a curated record into a verified lookup with computed savings. */
@@ -48,8 +64,12 @@ export function toVerifiedLookup(record: DrugComparison, source: MatchSource): V
  */
 export function lookupLocal(query: string): LookupOutcome {
   const trimmed = query.trim();
-  if (!trimmed) return { status: 'not_verified', query: trimmed };
+  if (!trimmed) return { status: 'not_verified', query: trimmed, reason: 'unknown' };
   const record = findComparison(trimmed);
   if (record) return toVerifiedLookup(record, 'curated');
-  return { status: 'not_verified', query: trimmed };
+  return {
+    status: 'not_verified',
+    query: trimmed,
+    reason: findCatalogCandidate(trimmed) ? 'draft_evidence' : 'unknown',
+  };
 }

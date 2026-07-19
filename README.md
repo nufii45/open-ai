@@ -1,46 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HealthBridge — Ask Before You Switch
 
-## Getting Started
+HealthBridge is a Filipino medication-access prototype. It helps someone compare a familiar branded medicine with a **like-for-like** generic, understand dated PHP price evidence, and prepare a pharmacist-ready question before purchasing.
 
-First, run the development server:
+It is not medical advice and does not tell anyone to start, stop, or change a medicine.
+
+## The safe product flow
+
+1. Search a medicine from the local comparison catalog.
+2. HealthBridge shows a saving only when both matching packs have current, human-checked evidence.
+3. Review active ingredient, strength, dosage form, pack, source, and observation date.
+4. Generate or copy a constrained pharmacist-ready question.
+5. Save the comparison locally on the device or opt in to nearby pharmacy map results and directions.
+
+Unknown medicines and catalog records without verified evidence intentionally show **Not yet verified locally**. The app never invents a generic, price, diagnosis, dose, or substitution recommendation.
+
+## Price evidence standard
+
+The repository currently contains **draft catalog candidates only**. They do not render savings until the team attaches an attributable Philippine source or internal receipt/screenshot ID for both matching packs.
+
+Use [the evidence checklist](docs/PRICE_EVIDENCE_TEMPLATE.md) before setting a record's `verified` flag. Each result requires matching active ingredient, strength, dosage form, and pack, plus fresh evidence no older than 45 days.
+
+## GPT-5.6 pharmacist brief
+
+`POST /api/pharmacist-brief` accepts only a verified local comparison ID. The server loads trusted catalog facts, asks GPT-5.6 Terra for a structured comparison summary, pharmacist question, and three-point checklist, then rejects unsafe output. It never receives symptoms, conditions, allergies, prescription history, or browser-supplied price data.
+
+If the model is unavailable, HealthBridge returns a deterministic safe template so the feature remains useful.
+
+Required server environment variable:
+
+```env
+OPENAI_API_KEY=your_server_only_key
+```
+
+Optional server environment variable for illustrative pharmacy route estimates:
+
+```env
+GEOAPIFY_API_KEY=your_server_only_key
+```
+
+Never use `NEXT_PUBLIC_` for either secret. In Vercel, connect the project to `nufii45/open-ai` and add the values in Environment Variables.
+
+Nearby pharmacy results use Geoapify's OpenStreetMap-derived `healthcare.pharmacy` places data only after the visitor grants browser location permission. Location is not stored. Results, routes, and directions do not indicate medicine stock, prices, hours, or availability.
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm test
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Build Week submission checklist
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Public deployment that judges can test without payment or login.
+- Public repository, or private access shared with `testing@devpost.com` and `build-week-event@openai.com`.
+- English demo video under three minutes: search, evidence, savings, pharmacist brief, and pharmacy direction.
+- Explain how Codex and GPT-5.6 contributed to the project; include the required `/feedback` Codex session ID in the submission.
+- Record dated commits and price evidence from the event period.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Safety boundary
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Illustrative pharmacy routes
-
-The location map uses Geoapify for server-side geocoding and road-route estimates. Add a server-only key before running the route experience:
-
-```bash
-GEOAPIFY_API_KEY=your_key_here
-```
-
-The browser asks for location only after the user selects **Use my location**. Pharmacy pins, route order, and travel estimates are illustrative and do not indicate live stock, price, or availability.
+HealthBridge helps prepare a pharmacist conversation. It does not diagnose conditions, assess emergencies, prescribe medication, recommend dosage, evaluate contraindications, or confirm that a substitution is safe. Always confirm a change with a pharmacist or prescriber.

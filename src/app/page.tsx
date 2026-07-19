@@ -137,7 +137,7 @@ export default function Home() {
                   <SearchForm query={query} onQueryChange={setQuery} onSearch={search} isLoading={phase === 'loading'} showEmptyError={showEmptyError} compact />
                 </div>
                 {phase === 'loading' ? <LoadingCard /> : null}
-                {phase === 'not_verified' ? <NoMatchCard query={outcome?.status === 'not_verified' ? outcome.query : query} /> : null}
+                {phase === 'not_verified' ? <NoMatchCard query={outcome?.status === 'not_verified' ? outcome.query : query} reason={outcome?.status === 'not_verified' ? outcome.reason : 'unknown'} /> : null}
                 {phase === 'error' ? <ErrorCard onRetry={() => void search(query)} /> : null}
                 {verifiedResult ? <ResultCard result={verifiedResult} isSaved={isSaved(verifiedResult.comparison.id)} onSave={() => saveComparison(verifiedResult)} /> : null}
               </section>

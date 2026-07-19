@@ -24,15 +24,19 @@ export function LoadingCard() {
   );
 }
 
-export function NoMatchCard({ query }: { query: string }) {
+export function NoMatchCard({ query, reason = 'unknown' }: { query: string; reason?: 'draft_evidence' | 'unknown' }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm sm:p-6">
       <span className="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
         <SearchX aria-hidden="true" className="size-5" />
       </span>
-      <p className="text-base font-semibold text-slate-950">Not yet verified locally</p>
+      <p className="text-base font-semibold text-slate-950">{reason === 'draft_evidence' ? 'Price evidence is being checked' : 'Not yet verified locally'}</p>
       <p className="max-w-md text-sm leading-6 text-slate-600">
-        {query ? (
+        {reason === 'draft_evidence' && query ? (
+          <>
+            We recognize <span className="font-medium text-slate-900">&ldquo;{query}&rdquo;</span>, but we will not show a savings claim until both matching packs have fresh local price evidence.
+          </>
+        ) : query ? (
           <>
             We don&apos;t have a verified comparison for{' '}
             <span className="font-medium text-slate-900">&ldquo;{query}&rdquo;</span> yet.
@@ -43,7 +47,7 @@ export function NoMatchCard({ query }: { query: string }) {
       </p>
       <p className="max-w-md text-sm leading-6 text-slate-600">
         Try a brand like <span className="font-medium">Biogesic</span> or{' '}
-        <span className="font-medium">Norvasc</span>, or ask your pharmacist about a generic option.
+        <span className="font-medium">Norvasc</span>, or ask your pharmacist about a generic option. HealthBridge does not recommend changing medicine on its own.
       </p>
     </div>
   );

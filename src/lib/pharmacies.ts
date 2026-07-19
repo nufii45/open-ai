@@ -63,3 +63,8 @@ export type PharmacyMapLocation = {
   latitude: number;
   longitude: number;
 };
+
+export type RouteDestination = PharmacyMapLocation & {
+  name: string;
+  branch: string;
+};

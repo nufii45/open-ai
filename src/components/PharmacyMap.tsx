@@ -57,7 +57,7 @@ export function PharmacyMap({
         zoom={14}
         scrollWheelZoom={false}
         className="h-full w-full"
-        aria-label="Illustrative pharmacy locations and selected route"
+        aria-label="Nearby pharmacy locations and selected route"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -98,7 +98,7 @@ export function PharmacyMap({
                 <br />
                 {pharmacy.branch}
                 <br />
-                Illustrative location
+                {pharmacy.label}
               </Popup>
             </CircleMarker>
           );
