@@ -8,11 +8,13 @@ import {
   MessageSquareText,
   Mic,
   Pencil,
+  Printer,
   Square,
 } from 'lucide-react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import type { CareJourney } from '@/lib/careJourneys';
+import { openStyledPrintPreview } from '@/lib/printDocument';
 import { type VisitNote, VISIT_NOTE_SAFETY_REMINDER } from '@/lib/visitNote';
 
 type Phase = 'idle' | 'loading' | 'ready' | 'error';
@@ -52,12 +54,19 @@ function supportsBrowserDictation() {
   return Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition);
 }
 
-export function VisitNoteAssistant({ journey }: { journey: CareJourney }) {
+export function VisitNoteAssistant({
+  journey,
+  onPrepared,
+}: {
+  journey: CareJourney;
+  onPrepared?: (prepared: VisitNote | null) => void;
+}) {
   const [note, setNote] = useState('');
   const [consented, setConsented] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [result, setResult] = useState<VisitNote | null>(null);
   const [copied, setCopied] = useState(false);
+  const [printError, setPrintError] = useState(false);
   const [dictationLanguage, setDictationLanguage] = useState<DictationLanguage>('en-PH');
   const [listening, setListening] = useState(false);
   const [speechError, setSpeechError] = useState(false);
@@ -74,6 +83,8 @@ export function VisitNoteAssistant({ journey }: { journey: CareJourney }) {
     setResult(null);
     setPhase('idle');
     setCopied(false);
+    setPrintError(false);
+    onPrepared?.(null);
   }
   function addPrompt(prompt: string) {
     setNote((current) => (current.trim() ? `${current.trim()}\n${prompt}` : prompt));
@@ -131,8 +142,10 @@ export function VisitNoteAssistant({ journey }: { journey: CareJourney }) {
         throw new Error('Could not prepare note.');
       setResult(data);
       setPhase('ready');
+      onPrepared?.(data);
     } catch {
       setPhase('error');
+      onPrepared?.(null);
     }
   }
   async function copy() {
@@ -144,6 +157,21 @@ export function VisitNoteAssistant({ journey }: { journey: CareJourney }) {
     } catch {
       setCopied(false);
     }
+  }
+
+  function exportVisitCard() {
+    if (!result) return;
+    const opened = openStyledPrintPreview({
+      eyebrow: `HealthBridge · ${journey.shortTitle}`,
+      title: 'Visit conversation card',
+      subtitle: 'Prepared from your own words. Review it before your visit.',
+      sections: [
+        { heading: 'Your own note', lines: [note.trim()] },
+        { heading: 'Questions to ask', lines: result.questions },
+      ],
+      footer: VISIT_NOTE_SAFETY_REMINDER,
+    });
+    setPrintError(!opened);
   }
 
   return (
@@ -330,14 +358,29 @@ export function VisitNoteAssistant({ journey }: { journey: CareJourney }) {
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            onClick={() => void copy()}
-            className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-stone-300 bg-[#fffaf2] px-3 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
-          >
-            <Copy className="size-4" aria-hidden="true" />
-            {copied ? 'Copied' : 'Copy visit card'}
-          </button>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void copy()}
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-stone-300 bg-[#fffaf2] px-3 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+            >
+              <Copy className="size-4" aria-hidden="true" />
+              {copied ? 'Copied' : 'Copy visit card'}
+            </button>
+            <button
+              type="button"
+              onClick={exportVisitCard}
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-blue-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"
+            >
+              <Printer className="size-4" aria-hidden="true" />
+              Export styled PDF
+            </button>
+          </div>
+          {printError ? (
+            <p role="alert" className="mt-3 text-xs leading-5 text-amber-800">
+              Your browser blocked the PDF preview. Allow pop-ups for HealthBridge, then try again.
+            </p>
+          ) : null}
           <p className="mt-3 text-xs text-slate-500">
             {result.source === 'ai'
               ? 'GPT-5.6 organized questions from your words; it did not make a medical assessment.'

@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const INTRO_DURATION_MS = 5_600;
 const INTRO_EXIT_DURATION_MS = 900;
+const MOBILE_INTRO_DURATION_MS = 8_500;
+const MOBILE_EXIT_DURATION_MS = 1_150;
 
 export function LandingIntro({ onComplete }: { onComplete: () => void }) {
   const [isExiting, setIsExiting] = useState(false);
@@ -12,25 +14,27 @@ export function LandingIntro({ onComplete }: { onComplete: () => void }) {
   const exitTimerRef = useRef<number | null>(null);
   const hasStartedExitRef = useRef(false);
   const beginExit = useCallback(
-    (instant = false) => {
+    (instant = false, exitDuration = INTRO_EXIT_DURATION_MS) => {
       if (hasStartedExitRef.current) return;
       hasStartedExitRef.current = true;
       setIsExiting(true);
-      exitTimerRef.current = window.setTimeout(onComplete, instant ? 0 : INTRO_EXIT_DURATION_MS);
+      exitTimerRef.current = window.setTimeout(onComplete, instant ? 0 : exitDuration);
     },
     [onComplete],
   );
 
   useEffect(() => {
     let reducedMotion = false;
+    let isMobile = false;
     try {
       reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      isMobile = window.matchMedia('(max-width: 639px)').matches;
     } catch {
       /* The intro remains usable when media queries are unavailable. */
     }
     introTimerRef.current = window.setTimeout(
-      () => beginExit(reducedMotion),
-      reducedMotion ? 0 : INTRO_DURATION_MS,
+      () => beginExit(reducedMotion, isMobile ? MOBILE_EXIT_DURATION_MS : INTRO_EXIT_DURATION_MS),
+      reducedMotion ? 0 : isMobile ? MOBILE_INTRO_DURATION_MS : INTRO_DURATION_MS,
     );
     return () => {
       if (introTimerRef.current !== null) window.clearTimeout(introTimerRef.current);
@@ -40,7 +44,7 @@ export function LandingIntro({ onComplete }: { onComplete: () => void }) {
 
   return (
     <main
-      className={`hb-intro-stage hb-intro-experience relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-12 text-slate-950 transition-opacity duration-900 ease-out ${isExiting ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
+      className={`hb-intro-stage hb-intro-experience relative flex min-h-[100svh] items-center justify-center overflow-hidden px-4 py-8 text-slate-950 transition-opacity duration-900 ease-out sm:min-h-screen sm:px-6 sm:py-12 ${isExiting ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
     >
       <div className="hb-intro-haze" aria-hidden="true" />
       <button
@@ -50,8 +54,8 @@ export function LandingIntro({ onComplete }: { onComplete: () => void }) {
       >
         Skip intro
       </button>
-      <div className="relative z-10 flex max-w-2xl flex-col items-center text-center">
-        <div className="hb-intro-emblem relative w-[15.5rem] sm:w-[18rem]" aria-hidden="true">
+      <div className="relative z-10 flex w-full max-w-2xl flex-col items-center text-center">
+        <div className="hb-intro-emblem relative w-[13rem] sm:w-[18rem]" aria-hidden="true">
           <svg viewBox="0 0 320 230" className="h-auto w-full" fill="none">
             <path
               className="hb-intro-arch"
@@ -115,19 +119,19 @@ export function LandingIntro({ onComplete }: { onComplete: () => void }) {
           </svg>
         </div>
         <div className="hb-intro-wordmark mt-2">
-          <h1 className="font-serif text-[clamp(3.75rem,12vw,7.5rem)] leading-none tracking-[-0.065em] text-slate-950">
+          <h1 className="font-serif text-[clamp(3rem,14vw,7.5rem)] leading-none tracking-[-0.065em] text-slate-950">
             Health<span className="text-blue-700">Bridge</span>
           </h1>
-          <div className="mt-5 flex items-center justify-center gap-3 text-[10px] font-semibold tracking-[0.28em] text-slate-700 sm:text-xs">
-            <span className="h-px w-7 bg-blue-700 sm:w-11" />
+          <div className="mt-5 flex items-center justify-center gap-2 whitespace-nowrap text-[9px] font-semibold tracking-[0.16em] text-slate-700 sm:gap-3 sm:text-xs sm:tracking-[0.28em]">
+            <span className="hidden h-px w-7 bg-blue-700 sm:block sm:w-11" />
             PREPARE · VERIFY · ASK · CONNECT
-            <span className="h-px w-7 bg-blue-700 sm:w-11" />
+            <span className="hidden h-px w-7 bg-blue-700 sm:block sm:w-11" />
           </div>
           <p className="mt-5 text-sm tracking-[0.04em] text-slate-600 sm:text-base">
             Handa sa bawat pagbisita. Kapanatagan sa bawat desisyon.
           </p>
         </div>
-        <div className="hb-intro-actions mt-9 flex flex-col items-center gap-4">
+        <div className="hb-intro-actions mt-8 flex flex-col items-center gap-4 sm:mt-9">
           <button
             type="button"
             onClick={() => beginExit()}

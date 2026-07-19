@@ -22,10 +22,12 @@ import { MedicineCounterCheck } from '@/components/MedicineCounterCheck';
 import { PharmacyLocator } from '@/components/PharmacyLocator';
 import { SavedCarePlans } from '@/components/SavedCarePlans';
 import { VisitNoteAssistant } from '@/components/VisitNoteAssistant';
+import { VisitRecommendations } from '@/components/VisitRecommendations';
 import { CARE_JOURNEYS, type CareJourneyId } from '@/lib/careJourneys';
 import { SAMPLE_PHARMACIES } from '@/lib/pharmacies';
 import type { DrugComparison } from '@/lib/types';
 import { useSavedCarePlans } from '@/lib/useSavedCarePlans';
+import type { VisitNote } from '@/lib/visitNote';
 
 const icons = { pharmacy: Pill, clinic: Building2, laboratory: FlaskConical, discharge: Hospital };
 const STEPS = ['Choose visit', 'Check details', 'Prepare plan', 'Find a place'];
@@ -65,7 +67,7 @@ function StepControls({
   nextLabel: string;
 }) {
   return (
-    <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-5">
+    <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
       <button
         type="button"
         onClick={onBack}
@@ -79,7 +81,7 @@ function StepControls({
         <button
           type="button"
           onClick={onNext}
-          className="hb-primary-cta inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
+          className="hb-primary-cta inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-3 text-right text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 sm:px-4"
         >
           {nextLabel}
           <ArrowRight className="size-4" aria-hidden="true" />
@@ -104,7 +106,7 @@ function ProgressRail({
   return (
     <nav
       aria-label="Visit preparation progress"
-      className="hb-progress-rail rounded-[1.35rem] border border-stone-300 bg-[#f8f1e7]/95 p-3 shadow-sm"
+      className="hb-progress-rail overflow-hidden rounded-[1.35rem] border border-stone-300 bg-[#f8f1e7]/95 p-1.5 shadow-sm sm:p-3"
     >
       <div className="grid grid-cols-4 gap-1">
         {STEPS.map((label, index) => {
@@ -118,7 +120,7 @@ function ProgressRail({
               onClick={() => indexStep <= step && onStepChange(indexStep)}
               disabled={indexStep > step}
               aria-current={active ? 'step' : undefined}
-              className={`relative min-h-15 border-l px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 first:border-l-0 ${active ? 'text-slate-950' : done ? 'text-slate-700 hover:bg-[#eee6da]' : 'cursor-not-allowed text-slate-400'}`}
+              className={`relative min-h-14 border-l px-1.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 first:border-l-0 sm:min-h-15 sm:px-2.5 ${active ? 'text-slate-950' : done ? 'text-slate-700 hover:bg-[#eee6da]' : 'cursor-not-allowed text-slate-400'}`}
             >
               <span
                 className={`flex size-6 items-center justify-center rounded-full text-[10px] font-bold ${active ? 'bg-blue-800 text-white shadow-sm shadow-blue-900/25' : done ? 'bg-slate-950 text-[#f8f1e7]' : 'border border-stone-300 bg-[#fbf8f2] text-slate-500'}`}
@@ -129,13 +131,13 @@ function ProgressRail({
                   String(indexStep).padStart(2, '0')
                 )}
               </span>
-              <span className="mt-1.5 block text-[11px] font-semibold leading-4 sm:text-xs">
+              <span className="mt-1.5 block text-[10px] font-semibold leading-3 sm:text-xs sm:leading-4">
                 {label}
               </span>
               {active ? (
                 <motion.span
                   layoutId="active-step-rule"
-                  className="absolute bottom-0 left-2.5 right-2.5 h-0.5 bg-blue-800"
+                  className="absolute bottom-0 left-1.5 right-1.5 h-0.5 bg-blue-800 sm:left-2.5 sm:right-2.5"
                   transition={{ type: 'spring', stiffness: 330, damping: 30 }}
                 />
               ) : null}
@@ -152,10 +154,13 @@ export default function Home() {
   const [introComplete, setIntroComplete] = useState(false);
   const [selectedId, setSelectedId] = useState<CareJourneyId>('pharmacy');
   const [selectedMedicine, setSelectedMedicine] = useState<DrugComparison | null>(null);
+  const [preparedVisitNote, setPreparedVisitNote] = useState<VisitNote | null>(null);
   const [step, setStep] = useState(1);
   const { saved, save, remove, isSaved } = useSavedCarePlans();
   const selected = CARE_JOURNEYS.find((journey) => journey.id === selectedId)!;
   const planId = `${selected.id}:${selectedMedicine?.id ?? 'visit'}`;
+  const aiPersonalizedQuestion =
+    preparedVisitNote?.source === 'ai' ? preparedVisitNote.questions[0] : null;
   const finishIntro = useCallback(() => setIntroComplete(true), []);
   const hero = heroCopy[step - 1];
 
@@ -164,18 +169,19 @@ export default function Home() {
   function chooseJourney(id: CareJourneyId) {
     setSelectedId(id);
     setSelectedMedicine(null);
+    setPreparedVisitNote(null);
   }
 
   return (
     <>
       <DisclaimerModal />
-      <main className="hb-app-shell min-h-screen px-4 py-5 text-slate-950 sm:px-6 lg:py-8">
+      <main className="hb-app-shell min-h-[100svh] overflow-x-clip px-3 py-4 text-slate-950 sm:min-h-screen sm:px-6 sm:py-5 lg:py-8">
         <div className="mx-auto w-full max-w-7xl">
           <motion.header
             initial={reduceMotion ? false : { opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: reduceMotion ? 0 : 0.45, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-6 flex items-center justify-between sm:mb-8"
+            className="mb-6 flex items-center justify-between gap-3 sm:mb-8"
           >
             <div className="flex items-center gap-3">
               <div className="hb-brand-mark flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-[15px] border border-slate-200 bg-[#fffaf2] p-1 shadow-lg shadow-slate-900/15">
@@ -199,13 +205,13 @@ export default function Home() {
           </motion.header>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
-            <div className="space-y-5">
+            <div className="min-w-0 space-y-5">
               <motion.section
                 layout
                 initial={reduceMotion ? false : { opacity: 0, scale: 0.985 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.16, 1, 0.3, 1] }}
-                className="hb-hero-surface relative min-h-64 overflow-hidden rounded-[1.5rem] px-6 py-7 text-white shadow-xl shadow-slate-900/15 sm:px-8"
+                className="hb-hero-surface relative min-h-60 overflow-hidden rounded-[1.5rem] px-5 py-6 text-white shadow-xl shadow-slate-900/15 sm:min-h-64 sm:px-8 sm:py-7"
               >
                 <div
                   className="hb-hero-aura pointer-events-none absolute -right-16 -top-24 size-72 rounded-full"
@@ -403,6 +409,10 @@ export default function Home() {
                               </motion.li>
                             ))}
                           </motion.ul>
+                          <VisitRecommendations
+                            journey={selected}
+                            personalizedQuestion={aiPersonalizedQuestion}
+                          />
                         </section>
                       )}
                       <StepControls
@@ -416,10 +426,11 @@ export default function Home() {
 
                   {step === 3 ? (
                     <section className="space-y-5">
-                      <VisitNoteAssistant journey={selected} />
+                      <VisitNoteAssistant journey={selected} onPrepared={setPreparedVisitNote} />
                       <CareVisitBrief
                         journey={selected}
                         saved={isSaved(planId)}
+                        personalizedQuestion={aiPersonalizedQuestion}
                         onSave={() =>
                           save({
                             id: planId,
