@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
       signal: controller.signal,
       body: JSON.stringify({
         model: 'gpt-5.6-terra',
-        temperature: 0,
         response_format: { type: 'json_object' },
         messages: [
           {

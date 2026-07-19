@@ -32,8 +32,6 @@ over all other work.
   classifies diseases, not drugs — it fills no field on the card and stays out. The
   openFDA carve-out above does not reopen this.
 - No backend beyond the three server routes named above.
-- No QR, PDF, voice, theme toggle, maps embed, multi-page nav, empty feature
-  folders, or unused state stores. React state is enough.
 - Single-screen, responsive down to ~360px, developed/demoed on desktop. The
   SAVINGS amount is the largest, boldest element on the card — the visual focal point.
 

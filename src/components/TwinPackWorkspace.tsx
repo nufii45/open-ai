@@ -1,12 +1,21 @@
 'use client';
 
-import { ArrowRight, Check, Clipboard, RefreshCw, ScanLine, ShieldCheck } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Clipboard,
+  Printer,
+  RefreshCw,
+  ScanLine,
+  ShieldCheck,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { PackScan } from '@/components/PackScan';
 import { PriceEvidenceCapture } from '@/components/PriceEvidenceCapture';
 import { PriceImpactCard } from '@/components/PriceImpactCard';
 import type { PackScanResult } from '@/lib/packScan';
+import { openStyledPrintPreview } from '@/lib/printDocument';
 import { compareReviewedPacks } from '@/lib/twinPack';
 
 type PackRole = 'branded' | 'generic';
@@ -22,6 +31,11 @@ function packIngredient(pack: PackScanResult) {
 function formatPHP(value: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
 }
+function formatCheckedAt(value: string | null) {
+  return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short' }).format(
+    new Date(value ?? Date.now()),
+  );
+}
 
 export function TwinPackWorkspace() {
   const [firstPack, setFirstPack] = useState<PackScanResult | null>(null);
@@ -29,7 +43,11 @@ export function TwinPackWorkspace() {
   const [firstRole, setFirstRole] = useState<PackRole>('branded');
   const [prices, setPrices] = useState<Prices>(EMPTY_PRICES);
   const [compared, setCompared] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
+  const [packsPerMonth, setPacksPerMonth] = useState('');
+  const [copiedQuestion, setCopiedQuestion] = useState(false);
+  const [copiedProof, setCopiedProof] = useState(false);
+  const [printError, setPrintError] = useState(false);
 
   const stage = firstPack ? 'second' : 'first';
   const match = firstPack && secondPack ? compareReviewedPacks(firstPack, secondPack) : null;
@@ -37,27 +55,43 @@ export function TwinPackWorkspace() {
   const genericPack = firstRole === 'generic' ? firstPack : secondPack;
   const brandedPrice = Number(prices.branded);
   const genericPrice = Number(prices.generic);
+  const packsPerMonthValue = Number(packsPerMonth);
+  const priceDifference = Math.round((brandedPrice - genericPrice) * 100) / 100;
+  const monthlyDifference =
+    packsPerMonthValue > 0 && priceDifference > 0
+      ? Math.round(priceDifference * packsPerMonthValue * 100) / 100
+      : null;
   const canCompare = Boolean(
     match?.matches && prices.reviewed && brandedPrice > 0 && genericPrice > 0,
   );
+  const activeStep = firstPack && secondPack ? 3 : firstPack ? 2 : 1;
 
   function reset() {
     setFirstPack(null);
     setSecondPack(null);
     setPrices(EMPTY_PRICES);
     setCompared(false);
-    setCopied(false);
+    setCheckedAt(null);
+    setPacksPerMonth('');
+    setCopiedQuestion(false);
+    setCopiedProof(false);
+    setPrintError(false);
   }
   function applyScan(result: PackScanResult) {
     if (!firstPack) setFirstPack(result);
     else setSecondPack(result);
     setPrices(EMPTY_PRICES);
     setCompared(false);
-    setCopied(false);
+    setCheckedAt(null);
+    setPacksPerMonth('');
+    setCopiedQuestion(false);
+    setCopiedProof(false);
+    setPrintError(false);
   }
   function updatePrice(kind: PackRole, value: string) {
     setPrices((current) => ({ ...current, [kind]: value }));
     setCompared(false);
+    setCheckedAt(null);
   }
   function applyPrice(kind: PackRole, value: number) {
     updatePrice(kind, value.toFixed(2));
@@ -69,10 +103,76 @@ export function TwinPackWorkspace() {
       : `Could you help me confirm these package differences before I compare prices?\n\n${match?.differences.join('\n')}`;
     try {
       await navigator.clipboard.writeText(message);
-      setCopied(true);
+      setCopiedQuestion(true);
     } catch {
-      setCopied(false);
+      setCopiedQuestion(false);
     }
+  }
+
+  async function copyCounterProof() {
+    if (!match?.matches || !brandedPack || !genericPack || !navigator.clipboard) return;
+    const checkedLabel = formatCheckedAt(checkedAt);
+    const monthlyLine =
+      monthlyDifference !== null
+        ? `\nPotential difference for ${packsPerMonthValue} matching pack${packsPerMonthValue === 1 ? '' : 's'} per month: ${formatPHP(monthlyDifference)}.`
+        : '';
+    const proof = `HEALTHBRIDGE COUNTER PROOF\nObserved: ${checkedLabel}\n\nExact-pack check\nIngredient: ${packIngredient(brandedPack)}\nStrength: ${brandedPack.strength}\nForm: ${brandedPack.dosageForm}\nPack quantity: ${brandedPack.packQuantity}\n\n${packName(brandedPack)}: ${formatPHP(brandedPrice)}\n${packName(genericPack)}: ${formatPHP(genericPrice)}\nDifference for this exact pack: ${formatPHP(priceDifference)}.${monthlyLine}\n\nPlease confirm the ingredient, strength, form, and pack before I compare these prices. HealthBridge does not recommend changing medicine.`;
+    try {
+      await navigator.clipboard.writeText(proof);
+      setCopiedProof(true);
+    } catch {
+      setCopiedProof(false);
+    }
+  }
+
+  function exportCounterProof() {
+    if (!match?.matches || !brandedPack || !genericPack) return;
+    const monthlyLine =
+      monthlyDifference !== null
+        ? `Potential difference for ${packsPerMonthValue} matching pack${packsPerMonthValue === 1 ? '' : 's'} per month: ${formatPHP(monthlyDifference)}.`
+        : 'No monthly quantity was entered.';
+    const opened = openStyledPrintPreview({
+      eyebrow: 'HealthBridge · Counter Proof',
+      title: 'Observed price comparison',
+      subtitle: `Checked ${formatCheckedAt(checkedAt)}. This is not a market price quote.`,
+      sections: [
+        {
+          heading: 'Exact-pack check',
+          lines: [
+            `Ingredient: ${packIngredient(brandedPack)}`,
+            `Strength: ${brandedPack.strength}`,
+            `Form: ${brandedPack.dosageForm}`,
+            `Pack quantity: ${brandedPack.packQuantity}`,
+          ],
+        },
+        {
+          heading: 'Prices personally observed',
+          lines: [
+            `${packName(brandedPack)}: ${formatPHP(brandedPrice)}`,
+            `${packName(genericPack)}: ${formatPHP(genericPrice)}`,
+            `Difference for this exact pack: ${formatPHP(priceDifference)}.`,
+            monthlyLine,
+          ],
+        },
+        {
+          heading: 'Question for the pharmacist',
+          lines: [
+            'Could you please confirm these are the same ingredient, strength, form, and pack before I compare the prices?',
+          ],
+        },
+      ],
+      footer:
+        'HealthBridge helps prepare a pharmacist conversation. It does not diagnose, prescribe, or recommend changing medicine.',
+    });
+    setPrintError(!opened);
+  }
+
+  function compareObservedPrices() {
+    setCheckedAt(new Date().toISOString());
+    setCompared(true);
+    setCopiedQuestion(false);
+    setCopiedProof(false);
+    setPrintError(false);
   }
 
   return (
@@ -96,7 +196,8 @@ export function TwinPackWorkspace() {
               Compare two physical packs, not a catalog guess
             </h3>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
-              The system only processes the text that's visible in a package. HealthBridge strictly checks the reviewed fields and never confirms that switching medicines is safe.
+              The system only processes the text that is visible in a package. HealthBridge strictly
+              checks the reviewed fields and never confirms that switching medicines is safe.
             </p>
           </div>
         </div>
@@ -112,15 +213,51 @@ export function TwinPackWorkspace() {
         ) : null}
       </div>
 
+      <ol
+        aria-label="Two-pack comparison progress"
+        className="mt-5 grid grid-cols-3 gap-2 rounded-2xl border border-blue-100 bg-white/75 p-2"
+      >
+        {[
+          { label: 'Scan first pack', detail: 'Capture the visible label' },
+          { label: 'Scan second pack', detail: 'Add the comparison pack' },
+          { label: 'Review & compare', detail: 'Confirm fields and prices' },
+        ].map((item, index) => {
+          const step = index + 1;
+          const complete = step < activeStep;
+          const active = step === activeStep;
+          return (
+            <li
+              key={item.label}
+              className={`rounded-xl px-2.5 py-2.5 sm:px-3 ${active ? 'bg-blue-800 text-white shadow-sm' : complete ? 'bg-blue-50 text-blue-950' : 'text-slate-400'}`}
+            >
+              <span
+                className={`flex size-6 items-center justify-center rounded-full text-[11px] font-bold ${active ? 'bg-white text-blue-800' : complete ? 'bg-blue-800 text-white' : 'border border-slate-300 bg-white text-slate-500'}`}
+              >
+                {complete ? <Check className="size-3.5" aria-hidden="true" /> : step}
+              </span>
+              <p className="mt-1.5 text-[11px] font-semibold leading-4 sm:text-xs">{item.label}</p>
+              <p
+                className={`mt-0.5 hidden text-[10px] leading-4 sm:block ${active ? 'text-blue-100' : 'text-slate-500'}`}
+              >
+                {item.detail}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+
       {!secondPack ? (
         <div className="mt-4">
-          <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-slate-600">
-            <span className="flex size-6 items-center justify-center rounded-full bg-blue-800 text-white">
-              {stage === 'first' ? '1' : '2'}
+          <div className="mb-3 flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50/80 px-3 py-2.5 text-xs leading-5 text-blue-950">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-800 text-white">
+              {activeStep}
             </span>
-            {stage === 'first'
-              ? 'Scan the first package. Review every extracted field before applying it.'
-              : 'Now scan the package you want to compare it with.'}
+            <span>
+              <strong>Step {activeStep} of 3.</strong>{' '}
+              {stage === 'first'
+                ? 'Scan the first package, then review every extracted field before applying it.'
+                : 'Now scan the package you want to compare it with.'}
+            </span>
           </div>
           <PackScan key={stage} onApply={applyScan} />
         </div>
@@ -229,13 +366,18 @@ export function TwinPackWorkspace() {
                   <li key={difference}>{difference}</li>
                 ))}
               </ul>
+              <p className="mt-3 border-t border-amber-200 pt-3 text-xs leading-5 text-amber-900">
+                A similar product name is not enough for a savings claim. These may be different
+                product variants, so confirm the exact pack with a pharmacist before comparing
+                prices.
+              </p>
               <button
                 type="button"
                 onClick={() => void copyQuestion()}
                 className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-950"
               >
                 <Clipboard className="size-3.5" aria-hidden="true" />
-                {copied ? 'Copied question' : 'Copy pharmacist question'}
+                {copiedQuestion ? 'Copied question' : 'Copy pharmacist question'}
               </button>
             </div>
           )}
@@ -272,6 +414,24 @@ export function TwinPackWorkspace() {
                 </label>
               </div>
               <PriceEvidenceCapture onApply={applyPrice} />
+              <label className="mt-4 block text-sm font-medium text-slate-700">
+                Matching packs you expect to buy per month{' '}
+                <span className="font-normal text-slate-500">(optional)</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  value={packsPerMonth}
+                  onChange={(event) => setPacksPerMonth(event.target.value)}
+                  placeholder="For example, 2"
+                  className="mt-1 h-11 w-full rounded-lg border border-stone-300 bg-white px-3 font-normal outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-700/15"
+                />
+              </label>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                This only multiplies the difference from the prices you entered. It does not suggest
+                how much medicine to buy or take.
+              </p>
               <label className="mt-4 flex items-start gap-3 rounded-xl bg-[#f0ece4] p-3 text-sm leading-5 text-slate-700">
                 <input
                   type="checkbox"
@@ -279,6 +439,7 @@ export function TwinPackWorkspace() {
                   onChange={(event) => {
                     setPrices((current) => ({ ...current, reviewed: event.target.checked }));
                     setCompared(false);
+                    setCheckedAt(null);
                   }}
                   className="mt-0.5 size-4 accent-blue-700"
                 />
@@ -287,7 +448,7 @@ export function TwinPackWorkspace() {
               </label>
               <button
                 type="button"
-                onClick={() => setCompared(true)}
+                onClick={compareObservedPrices}
                 disabled={!canCompare}
                 className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-950 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
@@ -305,8 +466,105 @@ export function TwinPackWorkspace() {
               <PriceImpactCard
                 brandedPrice={brandedPrice}
                 genericPrice={genericPrice}
-                checkedAt={new Date().toISOString()}
+                checkedAt={checkedAt}
               />
+              <section
+                className="mt-4 overflow-hidden rounded-2xl border border-blue-200 bg-[#fffaf2]"
+                aria-labelledby="counter-proof-heading"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-blue-100 bg-blue-50 px-4 py-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-800">
+                      Counter Proof
+                    </p>
+                    <h4
+                      id="counter-proof-heading"
+                      className="mt-1 text-base font-bold text-slate-950"
+                    >
+                      A record of the exact packs and prices you checked
+                    </h4>
+                  </div>
+                  <span className="rounded-full border border-blue-200 bg-[#fffaf2] px-2.5 py-1 text-xs font-semibold text-blue-900">
+                    User-observed
+                  </span>
+                </div>
+                <div className="grid divide-y divide-stone-200 text-sm sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                  <div className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Branded pack
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-950">{packName(brandedPack!)}</p>
+                    <p className="mt-1 text-sm font-medium text-blue-900">
+                      {formatPHP(brandedPrice)}
+                    </p>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Generic pack
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-950">{packName(genericPack!)}</p>
+                    <p className="mt-1 text-sm font-medium text-blue-900">
+                      {formatPHP(genericPrice)}
+                    </p>
+                  </div>
+                </div>
+                <div className="border-t border-stone-200 bg-[#f0ece4] p-4">
+                  <dl className="grid gap-3 text-xs leading-5 sm:grid-cols-4">
+                    <div>
+                      <dt className="font-medium text-slate-500">Ingredient</dt>
+                      <dd className="font-semibold text-slate-800">
+                        {packIngredient(brandedPack!)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-slate-500">Strength</dt>
+                      <dd className="font-semibold text-slate-800">{brandedPack!.strength}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-slate-500">Form</dt>
+                      <dd className="font-semibold text-slate-800">{brandedPack!.dosageForm}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-slate-500">Pack</dt>
+                      <dd className="font-semibold text-slate-800">{brandedPack!.packQuantity}</dd>
+                    </div>
+                  </dl>
+                  {monthlyDifference !== null ? (
+                    <p className="mt-4 rounded-xl border border-blue-200 bg-[#fffaf2] px-3 py-2 text-sm font-medium text-blue-950">
+                      {formatPHP(monthlyDifference)} potential difference for {packsPerMonthValue}{' '}
+                      matching pack{packsPerMonthValue === 1 ? '' : 's'} per month.
+                    </p>
+                  ) : null}
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-300 pt-3">
+                    <p className="text-xs leading-5 text-slate-600">
+                      Show this to a pharmacist to confirm the four pack details before making a
+                      choice.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void copyCounterProof()}
+                      className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-sm font-semibold text-blue-950 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+                    >
+                      <Clipboard className="size-4" aria-hidden="true" />
+                      {copiedProof ? 'Copied proof' : 'Copy Counter Proof'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={exportCounterProof}
+                      className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-blue-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"
+                    >
+                      <Printer className="size-4" aria-hidden="true" />
+                      Export styled PDF
+                    </button>
+                  </div>
+                  {printError ? (
+                    <p role="alert" className="mt-3 text-xs leading-5 text-amber-800">
+                      Your browser blocked the PDF preview. Allow pop-ups for HealthBridge, then try
+                      again.
+                    </p>
+                  ) : null}
+                </div>
+              </section>
               <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-800">
                   Pharmacist-ready question
@@ -321,7 +579,7 @@ export function TwinPackWorkspace() {
                   className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-xs font-semibold text-blue-950"
                 >
                   <Clipboard className="size-3.5" aria-hidden="true" />
-                  {copied ? 'Copied question' : 'Copy question'}
+                  {copiedQuestion ? 'Copied question' : 'Copy question'}
                 </button>
               </div>
             </>

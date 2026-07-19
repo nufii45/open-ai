@@ -20,7 +20,6 @@ async function generateBrief(comparison: DrugComparison, apiKey: string): Promis
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: MODEL,
-        temperature: 0,
         response_format: {
           type: 'json_schema',
           json_schema: {

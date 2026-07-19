@@ -6,6 +6,7 @@ import {
   Copy,
   Languages,
   LoaderCircle,
+  Printer,
   Share2,
   UsersRound,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import {
   type RelayAudience,
   type RelayLanguage,
 } from '@/lib/careBrief';
+import { openStyledPrintPreview } from '@/lib/printDocument';
 
 type BriefPhase = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -34,21 +36,26 @@ export function CareVisitBrief({
   journey,
   onSave,
   saved,
+  personalizedQuestion,
 }: {
   journey: CareJourney;
   onSave: () => void;
   saved: boolean;
+  personalizedQuestion?: string | null;
 }) {
   const [phase, setPhase] = useState<BriefPhase>('idle');
   const [brief, setBrief] = useState<CareBriefResponse | null>(null);
   const [audience, setAudience] = useState<RelayAudience>('self');
   const [language, setLanguage] = useState<RelayLanguage>('en');
   const [copied, setCopied] = useState(false);
+  const [printError, setPrintError] = useState(false);
+  const questionForCard = personalizedQuestion ?? brief?.primaryQuestion ?? '';
 
   function resetChoice() {
     setBrief(null);
     setPhase('idle');
     setCopied(false);
+    setPrintError(false);
   }
   function changeAudience(value: RelayAudience) {
     setAudience(value);
@@ -85,7 +92,7 @@ export function CareVisitBrief({
 
   function shareText() {
     if (!brief) return '';
-    return `${brief.relay.openingLine}\n\n${brief.primaryQuestion}\n\nBring or confirm:\n${brief.checklist.map((item) => `- ${item}`).join('\n')}\n\n${CARE_SAFETY_REMINDER}`;
+    return `${brief.relay.openingLine}\n\n${questionForCard}\n\nBring or confirm:\n${brief.checklist.map((item) => `- ${item}`).join('\n')}\n\n${CARE_SAFETY_REMINDER}`;
   }
 
   async function copy() {
@@ -105,6 +112,22 @@ export function CareVisitBrief({
     } catch {
       /* Native share can be cancelled. */
     }
+  }
+
+  function exportBrief() {
+    if (!brief) return;
+    const opened = openStyledPrintPreview({
+      eyebrow: `HealthBridge · ${journey.shortTitle}`,
+      title: 'Care Relay',
+      subtitle: `Prepared for ${brief.relay.audience === 'caregiver' ? 'a caregiver handoff' : 'a personal care conversation'}.`,
+      sections: [
+        { heading: 'Opening line', lines: [brief.relay.openingLine] },
+        { heading: 'Question to ask', lines: [questionForCard] },
+        { heading: 'Bring or confirm', lines: brief.checklist },
+      ],
+      footer: CARE_SAFETY_REMINDER,
+    });
+    setPrintError(!opened);
   }
 
   const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
@@ -221,9 +244,15 @@ export function CareVisitBrief({
           <p className="text-sm leading-6 text-slate-700">{brief.summary}</p>
           <div className="rounded-2xl border border-blue-200 bg-[#e6e7f8] p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-900">
-              Canonical question to ask
+              {personalizedQuestion ? 'Question from your note' : 'Suggested question to ask'}
             </p>
-            <p className="mt-1 text-base font-semibold text-slate-950">{brief.primaryQuestion}</p>
+            <p className="mt-1 text-base font-semibold text-slate-950">{questionForCard}</p>
+            {personalizedQuestion ? (
+              <p className="mt-2 text-xs leading-5 text-blue-950/75">
+                GPT-5.6 shaped this from your temporary note. Review it before using it in the
+                visit.
+              </p>
+            ) : null}
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">Bring or confirm</p>
@@ -257,6 +286,14 @@ export function CareVisitBrief({
             ) : null}
             <button
               type="button"
+              onClick={exportBrief}
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-stone-300 px-3 text-sm font-medium text-slate-700 transition hover:bg-[#fbf8f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+            >
+              <Printer className="size-4" aria-hidden="true" />
+              Export styled PDF
+            </button>
+            <button
+              type="button"
               onClick={onSave}
               disabled={saved}
               className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-blue-800 px-3 text-sm font-semibold text-white transition hover:bg-blue-900 disabled:bg-blue-100 disabled:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
@@ -265,6 +302,11 @@ export function CareVisitBrief({
               {saved ? 'Saved to my plans' : 'Save my plan'}
             </button>
           </div>
+          {printError ? (
+            <p role="alert" className="text-xs leading-5 text-amber-800">
+              Your browser blocked the PDF preview. Allow pop-ups for HealthBridge, then try again.
+            </p>
+          ) : null}
           <p className="text-xs text-slate-500">
             {brief.relay.source === 'ai'
               ? 'GPT-5.6 adapted the opening line; the checklist remains controlled by HealthBridge.'

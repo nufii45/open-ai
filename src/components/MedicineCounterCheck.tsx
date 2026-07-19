@@ -280,7 +280,7 @@ export function MedicineCounterCheck({
         <label htmlFor="medicine-check" className="sr-only">
           Medicine brand or generic
         </label>
-        <div className="flex gap-2">
+        <div className="flex gap-2 max-[380px]:flex-col">
           <input
             ref={inputRef}
             id="medicine-check"
@@ -291,7 +291,7 @@ export function MedicineCounterCheck({
           />
           <button
             type="submit"
-            className="inline-flex h-12 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 max-[380px]:w-full max-[380px]:justify-center"
           >
             <Search className="size-4" aria-hidden="true" />
             Check
