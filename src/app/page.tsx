@@ -11,21 +11,21 @@ import {
   Pill,
   PlayCircle,
   ShieldAlert,
-  ShieldCheck,
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import Image from 'next/image';
 import { useCallback, useState } from 'react';
 
 import { CareVisitBrief } from '@/components/CareVisitBrief';
+import { CareRelayWorkspace } from '@/components/CareRelayWorkspace';
 import { DisclaimerModal } from '@/components/DisclaimerModal';
 import { LandingIntro } from '@/components/LandingIntro';
 import { MedicineCounterCheck } from '@/components/MedicineCounterCheck';
 import { PharmacyLocator } from '@/components/PharmacyLocator';
 import { SavedCarePlans } from '@/components/SavedCarePlans';
 import { VisitNoteAssistant } from '@/components/VisitNoteAssistant';
-import { VisitRecommendations } from '@/components/VisitRecommendations';
 import { CARE_JOURNEYS, type CareJourneyId } from '@/lib/careJourneys';
+import { CARE_RELAY_STORAGE_KEY } from '@/lib/careRelay';
 import type { DemoScenario } from '@/lib/demoPacks';
 import { SAMPLE_PHARMACIES } from '@/lib/pharmacies';
 import type { DrugComparison } from '@/lib/types';
@@ -186,6 +186,7 @@ export default function Home() {
   function clearLocalSession() {
     clear();
     window.localStorage.removeItem('healthbridge.saved.v1');
+    window.localStorage.removeItem(CARE_RELAY_STORAGE_KEY);
     window.sessionStorage.clear();
     window.location.reload();
   }
@@ -413,54 +414,18 @@ export default function Home() {
                           onExitDemo={() => setDemo(null)}
                         />
                       ) : (
-                        <section className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm backdrop-blur sm:p-6">
-                          <div className="flex items-start gap-3">
-                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                              <ShieldCheck className="size-5" aria-hidden="true" />
-                            </span>
-                            <div>
-                              <p className="text-xs font-semibold tracking-[0.14em] text-teal-700">
-                                STEP 2 · PRACTICAL DETAILS
-                              </p>
-                              <h2 className="mt-1 text-xl font-bold tracking-tight">
-                                Gather the details that help the visit go smoothly
-                              </h2>
-                              <p className="mt-1 text-sm leading-6 text-slate-600">
-                                For your {selected.shortTitle.toLowerCase()} visit, keep this short
-                                checklist handy.
-                              </p>
-                            </div>
-                          </div>
-                          <motion.ul
-                            initial="hidden"
-                            animate="show"
-                            variants={{
-                              hidden: {},
-                              show: { transition: { staggerChildren: reduceMotion ? 0 : 0.06 } },
-                            }}
-                            className="mt-5 space-y-3"
-                          >
-                            {selected.preparation.map((item, index) => (
-                              <motion.li
-                                variants={{
-                                  hidden: { opacity: 0, x: reduceMotion ? 0 : -10 },
-                                  show: { opacity: 1, x: 0 },
-                                }}
-                                key={item}
-                                className="flex gap-3 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-700"
-                              >
-                                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-teal-700 shadow-sm">
-                                  {index + 1}
-                                </span>
-                                {item}
-                              </motion.li>
-                            ))}
-                          </motion.ul>
-                          <VisitRecommendations
-                            journey={selected}
-                            personalizedQuestion={aiPersonalizedQuestion}
-                          />
-                        </section>
+                        <CareRelayWorkspace
+                          key={selected.id}
+                          journey={selected}
+                          saved={isSaved(planId)}
+                          onSave={() =>
+                            save({
+                              id: planId,
+                              title: selected.title,
+                              savedAt: new Date().toISOString(),
+                            })
+                          }
+                        />
                       )}
                       <StepControls
                         step={step}
