@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ImagePlus,
   LoaderCircle,
+  PencilLine,
   RotateCcw,
   ScanLine,
   ShieldCheck,
@@ -17,6 +18,21 @@ import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import type { PackScanResult } from '@/lib/packScan';
 
 type Phase = 'idle' | 'ready' | 'scanning' | 'error';
+
+const AI_UNAVAILABLE =
+  'AI is unavailable; you can still compare manually after reviewing both packs.';
+const SCAN_FAILED = 'Pack Scan could not read this image. Enter the details manually below.';
+
+const EMPTY_RESULT: PackScanResult = {
+  brand: null,
+  generic: null,
+  activeIngredient: null,
+  strength: null,
+  dosageForm: null,
+  packQuantity: null,
+  confidence: 'uncertain',
+  notice: 'You entered these details yourself. Keep only what you can read on the package.',
+};
 
 function stopStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop());
@@ -140,14 +156,25 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
         body: JSON.stringify({ imageDataUrl }),
       });
       const data = (await response.json()) as { result?: PackScanResult; error?: string };
-      if (!response.ok || !data.result)
-        throw new Error(data.error ?? 'Pack Scan could not read this image.');
+      if (!response.ok || !data.result) {
+        // 5xx means the model or its key is unreachable, not that the photo was unreadable.
+        const unavailable = response.status >= 500;
+        throw new Error(unavailable ? AI_UNAVAILABLE : (data.error ?? SCAN_FAILED));
+      }
       setResult(data.result);
       setPhase('ready');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Pack Scan could not read this image.');
+      setError(caught instanceof Error ? caught.message : AI_UNAVAILABLE);
+      // Keep the preview and drop the user straight into editable empty fields.
+      setResult(EMPTY_RESULT);
       setPhase('error');
     }
+  }
+
+  function enterManually() {
+    setError(null);
+    setResult(EMPTY_RESULT);
+    setPhase('ready');
   }
 
   function updateExtracted<K extends keyof PackScanResult>(key: K, value: PackScanResult[K]) {
@@ -235,6 +262,24 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
               </span>
             </span>
           </label>
+          <button
+            type="button"
+            onClick={enterManually}
+            className="group flex min-h-20 items-start gap-3 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-4 text-left transition hover:border-teal-400 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 sm:col-span-2"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition group-hover:scale-105">
+              <PencilLine className="size-5" aria-hidden="true" />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold text-slate-950">
+                Enter details manually
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-slate-600">
+                Manual entry works without AI. Type what you read on the package — no photo, no
+                camera, no network.
+              </span>
+            </span>
+          </button>
         </div>
       ) : (
         <div className="mt-5 grid gap-4 rounded-2xl border border-white bg-white/85 p-3 shadow-sm sm:grid-cols-[8.5rem_minmax(0,1fr)]">
@@ -275,7 +320,18 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
                 <RotateCcw className="size-4" aria-hidden="true" />
                 Retake
               </button>
+              <button
+                type="button"
+                onClick={enterManually}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:border-teal-400 hover:bg-slate-50"
+              >
+                <PencilLine className="size-4" aria-hidden="true" />
+                Enter manually
+              </button>
             </div>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Manual entry works without AI.
+            </p>
           </div>
         </div>
       )}

@@ -9,12 +9,24 @@ import {
   RefreshCw,
   ScanLine,
   ShieldCheck,
+  UserRoundCheck,
+  WifiOff,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useReducedMotion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
 
 import { PackScan } from '@/components/PackScan';
+import { PharmacistHandoff } from '@/components/PharmacistHandoff';
 import { PriceEvidenceCapture } from '@/components/PriceEvidenceCapture';
 import { PriceImpactCard } from '@/components/PriceImpactCard';
+import {
+  MATCH_QUESTION,
+  buildCounterProof,
+  buildMismatchQuestion,
+  formatCheckedAt,
+  formatPHP,
+} from '@/lib/counterProof';
+import { DEMO_SEEDS, type DemoScenario } from '@/lib/demoPacks';
 import type { PackScanResult } from '@/lib/packScan';
 import { openStyledPrintPreview } from '@/lib/printDocument';
 import { compareReviewedPacks } from '@/lib/twinPack';
@@ -23,6 +35,47 @@ type PackRole = 'branded' | 'generic';
 type Prices = { branded: string; generic: string; reviewed: boolean };
 const EMPTY_PRICES: Prices = { branded: '', generic: '', reviewed: false };
 
+const PROVENANCE = [
+  { who: 'AI / extraction', what: 'Reads visible text on the package only.' },
+  { who: 'Deterministic check', what: 'Compares ingredient, strength, form, and pack quantity.' },
+  { who: 'You', what: 'Enter and review the prices you personally observed.' },
+  { who: 'Pharmacist', what: 'Confirms the packs before any decision is made.' },
+];
+
+function StatusRow({
+  fieldsMatch,
+  pricesReviewed,
+}: {
+  fieldsMatch: boolean;
+  pricesReviewed: boolean;
+}) {
+  const steps = [
+    { label: 'Fields match', done: fieldsMatch },
+    { label: 'Prices reviewed', done: pricesReviewed },
+    // Deliberately never satisfiable in-app: only a pharmacist can close this out.
+    { label: 'Pharmacist confirmation needed', done: false },
+  ];
+  return (
+    <ol
+      aria-label="Trust status"
+      className="mt-4 grid gap-2 rounded-2xl border border-stone-300 bg-white/80 p-2 sm:grid-cols-3"
+    >
+      {steps.map((step, index) => (
+        <li
+          key={step.label}
+          className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold ${step.done ? 'bg-blue-50 text-blue-950' : 'bg-[#f0ece4] text-slate-600'}`}
+        >
+          <span
+            className={`flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] ${step.done ? 'bg-blue-800 text-white' : 'border border-slate-400 bg-white text-slate-500'}`}
+          >
+            {step.done ? <Check className="size-3" aria-hidden="true" /> : index + 1}
+          </span>
+          {step.label}
+        </li>
+      ))}
+    </ol>
+  );
+}
 const VERIFIED_DEMO_PACKS: readonly [PackScanResult, PackScanResult] = [
   {
     brand: 'Biogesic',
@@ -60,26 +113,33 @@ function packName(pack: PackScanResult) {
 function packIngredient(pack: PackScanResult) {
   return pack.activeIngredient ?? pack.generic ?? '';
 }
-function formatPHP(value: number) {
-  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
-}
-function formatCheckedAt(value: string | null) {
-  return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short' }).format(
-    new Date(value ?? Date.now()),
-  );
-}
 
-export function TwinPackWorkspace() {
-  const [firstPack, setFirstPack] = useState<PackScanResult | null>(null);
-  const [secondPack, setSecondPack] = useState<PackScanResult | null>(null);
-  const [firstRole, setFirstRole] = useState<PackRole>('branded');
-  const [prices, setPrices] = useState<Prices>(EMPTY_PRICES);
+export function TwinPackWorkspace({
+  demo = null,
+  onExitDemo,
+}: {
+  demo?: DemoScenario | null;
+  onExitDemo?: () => void;
+}) {
+  const reduceMotion = useReducedMotion();
+  const seed = demo ? DEMO_SEEDS[demo] : null;
+  const [firstPack, setFirstPack] = useState<PackScanResult | null>(seed?.first ?? null);
+  const [secondPack, setSecondPack] = useState<PackScanResult | null>(seed?.second ?? null);
+  const [firstRole, setFirstRole] = useState<PackRole>(seed?.firstRole ?? 'branded');
+  const [prices, setPrices] = useState<Prices>(
+    seed ? { branded: seed.branded, generic: seed.generic, reviewed: true } : EMPTY_PRICES,
+  );
   const [compared, setCompared] = useState(false);
   const [checkedAt, setCheckedAt] = useState<string | null>(null);
   const [packsPerMonth, setPacksPerMonth] = useState('');
   const [copiedQuestion, setCopiedQuestion] = useState(false);
   const [copiedProof, setCopiedProof] = useState(false);
   const [printError, setPrintError] = useState(false);
+  const [handoffOpen, setHandoffOpen] = useState(false);
+
+  const compareRef = useRef<HTMLButtonElement>(null);
+  const brandedPriceRef = useRef<HTMLInputElement>(null);
+  const genericPriceRef = useRef<HTMLInputElement>(null);
   const [demoMode, setDemoMode] = useState(false);
 
   const stage = firstPack ? 'second' : 'first';
@@ -89,19 +149,40 @@ export function TwinPackWorkspace() {
   const brandedPrice = Number(prices.branded);
   const genericPrice = Number(prices.generic);
   const packsPerMonthValue = Number(packsPerMonth);
-  const priceDifference = Math.round((brandedPrice - genericPrice) * 100) / 100;
-  const monthlyDifference =
-    packsPerMonthValue > 0 && priceDifference > 0
-      ? Math.round(priceDifference * packsPerMonthValue * 100) / 100
-      : null;
   const canCompare = Boolean(
     match?.matches && prices.reviewed && brandedPrice > 0 && genericPrice > 0,
   );
   const activeStep = firstPack && secondPack ? 3 : firstPack ? 2 : 1;
 
+  const proof =
+    match?.matches && brandedPack && genericPack && brandedPrice > 0 && genericPrice > 0
+      ? buildCounterProof({
+          brandedName: packName(brandedPack),
+          genericName: packName(genericPack),
+          ingredient: packIngredient(brandedPack),
+          strength: brandedPack.strength ?? 'Not read',
+          form: brandedPack.dosageForm ?? 'Not read',
+          packQuantity: String(brandedPack.packQuantity ?? 'Not read'),
+          brandedPrice,
+          genericPrice,
+          checkedAt,
+          packsPerMonth: packsPerMonthValue,
+        })
+      : null;
+
+  // A seeded demo lands the judge on the one button that finishes the flow.
+  useEffect(() => {
+    if (!demo || !compareRef.current) return;
+    compareRef.current.scrollIntoView({
+      block: 'center',
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
+  }, [demo, reduceMotion]);
+
   function reset() {
     setFirstPack(null);
     setSecondPack(null);
+    setFirstRole('branded');
     setPrices(EMPTY_PRICES);
     setCompared(false);
     setCheckedAt(null);
@@ -109,6 +190,8 @@ export function TwinPackWorkspace() {
     setCopiedQuestion(false);
     setCopiedProof(false);
     setPrintError(false);
+    setHandoffOpen(false);
+    onExitDemo?.();
     setDemoMode(false);
   }
   function loadDemo(kind: 'verified' | 'mismatch') {
@@ -149,9 +232,8 @@ export function TwinPackWorkspace() {
   }
   async function copyQuestion() {
     if (!firstPack || !secondPack || !navigator.clipboard) return;
-    const message = match?.matches
-      ? `Could you please confirm these are the same ingredient, strength, form, and pack before I compare the prices?\n\n${packName(brandedPack!)}: ${formatPHP(brandedPrice)}\n${packName(genericPack!)}: ${formatPHP(genericPrice)}`
-      : `Could you help me confirm these package differences before I compare prices?\n\n${match?.differences.join('\n')}`;
+    // A blocked comparison must ask a different question than a verified one.
+    const message = proof ? proof.text : buildMismatchQuestion(match?.differences ?? []);
     try {
       await navigator.clipboard.writeText(message);
       setCopiedQuestion(true);
@@ -161,15 +243,9 @@ export function TwinPackWorkspace() {
   }
 
   async function copyCounterProof() {
-    if (!match?.matches || !brandedPack || !genericPack || !navigator.clipboard) return;
-    const checkedLabel = formatCheckedAt(checkedAt);
-    const monthlyLine =
-      monthlyDifference !== null
-        ? `\nPotential difference for ${packsPerMonthValue} matching pack${packsPerMonthValue === 1 ? '' : 's'} per month: ${formatPHP(monthlyDifference)}.`
-        : '';
-    const proof = `HEALTHBRIDGE COUNTER PROOF\nObserved: ${checkedLabel}\n\nExact-pack check\nIngredient: ${packIngredient(brandedPack)}\nStrength: ${brandedPack.strength}\nForm: ${brandedPack.dosageForm}\nPack quantity: ${brandedPack.packQuantity}\n\n${packName(brandedPack)}: ${formatPHP(brandedPrice)}\n${packName(genericPack)}: ${formatPHP(genericPrice)}\nDifference for this exact pack: ${formatPHP(priceDifference)}.${monthlyLine}\n\nPlease confirm the ingredient, strength, form, and pack before I compare these prices. HealthBridge does not recommend changing medicine.`;
+    if (!proof || !navigator.clipboard) return;
     try {
-      await navigator.clipboard.writeText(proof);
+      await navigator.clipboard.writeText(proof.text);
       setCopiedProof(true);
     } catch {
       setCopiedProof(false);
@@ -177,45 +253,22 @@ export function TwinPackWorkspace() {
   }
 
   function exportCounterProof() {
-    if (!match?.matches || !brandedPack || !genericPack) return;
-    const monthlyLine =
-      monthlyDifference !== null
-        ? `Potential difference for ${packsPerMonthValue} matching pack${packsPerMonthValue === 1 ? '' : 's'} per month: ${formatPHP(monthlyDifference)}.`
-        : 'No monthly quantity was entered.';
+    if (!proof) return;
     const opened = openStyledPrintPreview({
       eyebrow: 'HealthBridge · Counter Proof',
       title: 'Observed price comparison',
       subtitle: `Checked ${formatCheckedAt(checkedAt)}. This is not a market price quote.`,
-      sections: [
-        {
-          heading: 'Exact-pack check',
-          lines: [
-            `Ingredient: ${packIngredient(brandedPack)}`,
-            `Strength: ${brandedPack.strength}`,
-            `Form: ${brandedPack.dosageForm}`,
-            `Pack quantity: ${brandedPack.packQuantity}`,
-          ],
-        },
-        {
-          heading: 'Prices personally observed',
-          lines: [
-            `${packName(brandedPack)}: ${formatPHP(brandedPrice)}`,
-            `${packName(genericPack)}: ${formatPHP(genericPrice)}`,
-            `Difference for this exact pack: ${formatPHP(priceDifference)}.`,
-            monthlyLine,
-          ],
-        },
-        {
-          heading: 'Question for the pharmacist',
-          lines: [
-            'Could you please confirm these are the same ingredient, strength, form, and pack before I compare the prices?',
-          ],
-        },
-      ],
+      sections: proof.sections,
       footer:
         'HealthBridge helps prepare a pharmacist conversation. It does not diagnose, prescribe, or recommend changing medicine.',
     });
     setPrintError(!opened);
+  }
+
+  function focusPriceInput(kind: PackRole) {
+    const input = kind === 'branded' ? brandedPriceRef.current : genericPriceRef.current;
+    input?.focus();
+    input?.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
   }
 
   function compareObservedPrices() {
@@ -237,9 +290,17 @@ export function TwinPackWorkspace() {
             <ScanLine className="size-5" aria-hidden="true" />
           </span>
           <div>
-            <p className="text-xs font-semibold tracking-[0.14em] text-blue-800">
-              SCAN → VERIFY → ASK
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-semibold tracking-[0.14em] text-blue-800">
+                SCAN → VERIFY → ASK
+              </p>
+              {demo ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-900">
+                  <WifiOff className="size-3.5" aria-hidden="true" />
+                  Local demo data · no network
+                </span>
+              ) : null}
+            </div>
             <h3
               id="twin-pack-heading"
               className="mt-1 text-lg font-bold tracking-tight text-slate-950"
@@ -259,7 +320,7 @@ export function TwinPackWorkspace() {
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-stone-300 bg-[#fffaf2] px-3 text-xs font-semibold text-slate-700 transition hover:border-blue-300"
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />
-            Start over
+            {demo ? 'Reset demo' : 'Start over'}
           </button>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -453,6 +514,9 @@ export function TwinPackWorkspace() {
                 product variants, so confirm the exact pack with a pharmacist before comparing
                 prices.
               </p>
+              <p className="mt-3 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-semibold leading-6 text-amber-950">
+                Can you help confirm why these packs differ?
+              </p>
               <button
                 type="button"
                 onClick={() => void copyQuestion()}
@@ -463,6 +527,11 @@ export function TwinPackWorkspace() {
               </button>
             </div>
           )}
+
+          <StatusRow
+            fieldsMatch={Boolean(match?.matches)}
+            pricesReviewed={Boolean(compared && prices.reviewed && canCompare)}
+          />
 
           {match?.matches ? (
             <div className="mt-4 rounded-2xl border border-stone-300 bg-[#fffaf2] p-4">
@@ -475,6 +544,7 @@ export function TwinPackWorkspace() {
                 <label className="text-sm font-medium text-slate-700">
                   Branded price (₱)
                   <input
+                    ref={brandedPriceRef}
                     type="number"
                     min="0.01"
                     step="0.01"
@@ -486,6 +556,7 @@ export function TwinPackWorkspace() {
                 <label className="text-sm font-medium text-slate-700">
                   Generic price (₱)
                   <input
+                    ref={genericPriceRef}
                     type="number"
                     min="0.01"
                     step="0.01"
@@ -495,7 +566,7 @@ export function TwinPackWorkspace() {
                   />
                 </label>
               </div>
-              <PriceEvidenceCapture onApply={applyPrice} />
+              <PriceEvidenceCapture onApply={applyPrice} onFailure={focusPriceInput} />
               <label className="mt-4 block text-sm font-medium text-slate-700">
                 Matching packs you expect to buy per month{' '}
                 <span className="font-normal text-slate-500">(optional)</span>
@@ -525,14 +596,16 @@ export function TwinPackWorkspace() {
                   }}
                   className="mt-0.5 size-4 accent-blue-700"
                 />
-                I reviewed the two physical packs and these are the prices I personally observed for
-                them.
+                {demo
+                  ? 'These are sample prices from local demo data, not a real observation.'
+                  : 'I reviewed the two physical packs and these are the prices I personally observed for them.'}
               </label>
               <button
+                ref={compareRef}
                 type="button"
                 onClick={compareObservedPrices}
                 disabled={!canCompare}
-                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-950 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className={`mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-950 disabled:cursor-not-allowed disabled:bg-slate-300 ${demo && !compared ? 'ring-4 ring-amber-400 ring-offset-2' : ''}`}
               >
                 Compare observed prices <ArrowRight className="size-4" aria-hidden="true" />
               </button>
@@ -543,7 +616,7 @@ export function TwinPackWorkspace() {
               ) : null}
             </div>
           ) : null}
-          {compared && match?.matches ? (
+          {compared && proof ? (
             <>
               <PriceImpactCard
                 brandedPrice={brandedPrice}
@@ -611,16 +684,23 @@ export function TwinPackWorkspace() {
                       <dd className="font-semibold text-slate-800">{brandedPack!.packQuantity}</dd>
                     </div>
                   </dl>
-                  {monthlyDifference !== null ? (
-                    <p className="mt-4 rounded-xl border border-blue-200 bg-[#fffaf2] px-3 py-2 text-sm font-medium text-blue-950">
-                      {formatPHP(monthlyDifference)} potential difference for {packsPerMonthValue}{' '}
-                      matching pack{packsPerMonthValue === 1 ? '' : 's'} per month.
-                    </p>
-                  ) : null}
+                  <p className="mt-4 rounded-xl border border-blue-200 bg-[#fffaf2] px-3 py-2 text-sm font-medium text-blue-950">
+                    Difference for this exact pack: {formatPHP(proof.difference)}.
+                    {proof.monthlyDifference !== null
+                      ? ` ${formatPHP(proof.monthlyDifference)} potential difference for ${packsPerMonthValue} matching pack${packsPerMonthValue === 1 ? '' : 's'} per month.`
+                      : ''}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setHandoffOpen(true)}
+                    className="mt-4 inline-flex min-h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-slate-950 px-4 text-base font-bold text-white shadow-lg shadow-slate-900/15 transition hover:bg-blue-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"
+                  >
+                    <UserRoundCheck className="size-5" aria-hidden="true" />
+                    Show this to a pharmacist
+                  </button>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-300 pt-3">
                     <p className="text-xs leading-5 text-slate-600">
-                      Show this to a pharmacist to confirm the four pack details before making a
-                      choice.
+                      A pharmacist confirms the four pack details before any choice is made.
                     </p>
                     <button
                       type="button"
@@ -633,7 +713,7 @@ export function TwinPackWorkspace() {
                     <button
                       type="button"
                       onClick={exportCounterProof}
-                      className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-blue-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"
+                      className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-stone-400 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
                     >
                       <Printer className="size-4" aria-hidden="true" />
                       Export styled PDF
@@ -647,23 +727,43 @@ export function TwinPackWorkspace() {
                   ) : null}
                 </div>
               </section>
-              <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-800">
-                  Pharmacist-ready question
-                </p>
-                <p className="mt-2 text-sm font-semibold leading-6 text-slate-950">
-                  Could you please confirm these are the same ingredient, strength, form, and pack
-                  before I compare the prices?
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void copyQuestion()}
-                  className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-xs font-semibold text-blue-950"
-                >
-                  <Clipboard className="size-3.5" aria-hidden="true" />
-                  {copiedQuestion ? 'Copied question' : 'Copy question'}
-                </button>
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-800">
+                    Pharmacist-ready question
+                  </p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-950">
+                    {MATCH_QUESTION}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void copyQuestion()}
+                    className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 text-xs font-semibold text-blue-950"
+                  >
+                    <Clipboard className="size-3.5" aria-hidden="true" />
+                    {copiedQuestion ? 'Copied question' : 'Copy question'}
+                  </button>
+                </div>
+                <div className="rounded-xl border border-stone-300 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    How this result was made
+                  </p>
+                  <dl className="mt-2 space-y-2">
+                    {PROVENANCE.map((row) => (
+                      <div key={row.who} className="text-xs leading-5">
+                        <dt className="font-semibold text-slate-900">{row.who}</dt>
+                        <dd className="text-slate-600">{row.what}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
               </div>
+              <PharmacistHandoff
+                open={handoffOpen}
+                onClose={() => setHandoffOpen(false)}
+                sections={proof.sections}
+                text={proof.text}
+              />
             </>
           ) : null}
         </>
