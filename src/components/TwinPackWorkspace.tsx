@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Check,
   Clipboard,
+  FlaskConical,
   Printer,
   RefreshCw,
   ScanLine,
@@ -21,6 +22,37 @@ import { compareReviewedPacks } from '@/lib/twinPack';
 type PackRole = 'branded' | 'generic';
 type Prices = { branded: string; generic: string; reviewed: boolean };
 const EMPTY_PRICES: Prices = { branded: '', generic: '', reviewed: false };
+
+const VERIFIED_DEMO_PACKS: readonly [PackScanResult, PackScanResult] = [
+  {
+    brand: 'Biogesic',
+    generic: 'Paracetamol',
+    activeIngredient: 'Paracetamol',
+    strength: '500 mg',
+    dosageForm: 'Tablet',
+    packQuantity: 10,
+    confidence: 'high',
+    notice: 'Demo data. Review the printed package with a pharmacist.',
+  },
+  {
+    brand: null,
+    generic: 'Paracetamol',
+    activeIngredient: 'Paracetamol',
+    strength: '500 mg',
+    dosageForm: 'Tablet',
+    packQuantity: 10,
+    confidence: 'high',
+    notice: 'Demo data. Review the printed package with a pharmacist.',
+  },
+];
+
+const MISMATCH_DEMO_PACKS: readonly [PackScanResult, PackScanResult] = [
+  VERIFIED_DEMO_PACKS[0],
+  {
+    ...VERIFIED_DEMO_PACKS[1],
+    strength: '650 mg',
+  },
+];
 
 function packName(pack: PackScanResult) {
   return pack.brand ?? pack.generic ?? pack.activeIngredient ?? 'Unnamed package';
@@ -48,6 +80,7 @@ export function TwinPackWorkspace() {
   const [copiedQuestion, setCopiedQuestion] = useState(false);
   const [copiedProof, setCopiedProof] = useState(false);
   const [printError, setPrintError] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
 
   const stage = firstPack ? 'second' : 'first';
   const match = firstPack && secondPack ? compareReviewedPacks(firstPack, secondPack) : null;
@@ -76,6 +109,23 @@ export function TwinPackWorkspace() {
     setCopiedQuestion(false);
     setCopiedProof(false);
     setPrintError(false);
+    setDemoMode(false);
+  }
+  function loadDemo(kind: 'verified' | 'mismatch') {
+    const [first, second] = kind === 'verified' ? VERIFIED_DEMO_PACKS : MISMATCH_DEMO_PACKS;
+    setFirstPack(first);
+    setSecondPack(second);
+    setFirstRole('branded');
+    setPrices(
+      kind === 'verified' ? { branded: '46.00', generic: '15.00', reviewed: true } : EMPTY_PRICES,
+    );
+    setCompared(false);
+    setCheckedAt(null);
+    setPacksPerMonth('');
+    setCopiedQuestion(false);
+    setCopiedProof(false);
+    setPrintError(false);
+    setDemoMode(true);
   }
   function applyScan(result: PackScanResult) {
     if (!firstPack) setFirstPack(result);
@@ -87,6 +137,7 @@ export function TwinPackWorkspace() {
     setCopiedQuestion(false);
     setCopiedProof(false);
     setPrintError(false);
+    setDemoMode(false);
   }
   function updatePrice(kind: PackRole, value: string) {
     setPrices((current) => ({ ...current, [kind]: value }));
@@ -210,8 +261,39 @@ export function TwinPackWorkspace() {
             <RefreshCw className="size-3.5" aria-hidden="true" />
             Start over
           </button>
-        ) : null}
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => loadDemo('verified')}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-3 text-xs font-semibold text-blue-950 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+            >
+              <FlaskConical className="size-3.5" aria-hidden="true" />
+              Try verified demo
+            </button>
+            <button
+              type="button"
+              onClick={() => loadDemo('mismatch')}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-950 transition hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700"
+            >
+              See mismatch demo
+            </button>
+          </div>
+        )}
       </div>
+
+      {!firstPack && !secondPack ? (
+        <p className="mt-3 rounded-xl border border-blue-100 bg-white/75 px-3 py-2 text-xs leading-5 text-slate-600">
+          Demo packs are local sample data: no camera, upload, or AI request is made.
+        </p>
+      ) : null}
+
+      {demoMode ? (
+        <p className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs leading-5 text-indigo-950">
+          Demo mode: the packs and PHP amounts below are illustrative local sample data, not market
+          prices or a purchase recommendation.
+        </p>
+      ) : null}
 
       <ol
         aria-label="Two-pack comparison progress"
