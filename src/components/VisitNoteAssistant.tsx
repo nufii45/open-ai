@@ -295,8 +295,9 @@ export function VisitNoteAssistant({
               onChange={(event) => setConsented(event.target.checked)}
               className="mt-0.5 size-4 accent-blue-700"
             />
-            I understand this note is sent to HealthBridge only to create this card. It is not saved
-            in my plan or used for diagnosis.
+            I understand this temporary note is sent to HealthBridge&apos;s AI service only to
+            create practical questions. It is not saved in my plan, used for diagnosis, or shared as
+            a medical record.
           </label>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button

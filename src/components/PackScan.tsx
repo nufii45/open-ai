@@ -49,6 +49,7 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
   const [error, setError] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [scanConsented, setScanConsented] = useState(false);
 
   useEffect(() => {
     if (!cameraOpen || !cameraStream || !videoRef.current) return;
@@ -70,6 +71,7 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
     setImageDataUrl(null);
     setResult(null);
     setError(null);
+    setScanConsented(false);
     if (inputRef.current) inputRef.current.value = '';
   }
 
@@ -77,6 +79,7 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
     setImageDataUrl(dataUrl);
     setResult(null);
     setError(null);
+    setScanConsented(false);
     setPhase('ready');
   }
 
@@ -298,11 +301,21 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
             <p className="mt-1 text-sm text-slate-600">
               Review the preview, then let AI extract only the printed pack details.
             </p>
+            <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-xl border border-teal-100 bg-teal-50/70 p-2.5 text-xs leading-5 text-slate-700">
+              <input
+                type="checkbox"
+                checked={scanConsented}
+                onChange={(event) => setScanConsented(event.target.checked)}
+                className="mt-0.5 size-4 shrink-0 accent-teal-700"
+              />
+              I understand this image will be sent for text extraction and should not contain a
+              prescription, ID, or personal document.
+            </label>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => void scan()}
-                disabled={phase === 'scanning'}
+                disabled={phase === 'scanning' || !scanConsented}
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:bg-slate-400"
               >
                 {phase === 'scanning' ? (
@@ -330,7 +343,9 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
               </button>
             </div>
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              Manual entry works without AI.
+              {scanConsented
+                ? 'Manual entry works without AI.'
+                : 'Consent is needed only to scan. You can enter package details manually instead.'}
             </p>
           </div>
         </div>
@@ -340,6 +355,16 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
         Use only a product package—never a prescription, ID, or personal document. You stay in
         control of what is applied.
       </div>
+      <details className="mt-3 rounded-xl border border-slate-200 bg-white/70 px-3 py-2.5 text-xs leading-5 text-slate-600">
+        <summary className="cursor-pointer font-semibold text-slate-800">
+          Privacy for package scans
+        </summary>
+        <p className="mt-2">
+          HealthBridge sends only the selected package image to the server AI service to read
+          visible label text. The image is not saved by HealthBridge, and you can always use manual
+          entry instead. Do not upload prescriptions, IDs, or personal documents.
+        </p>
+      </details>
       {error ? (
         <p role="alert" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {error}

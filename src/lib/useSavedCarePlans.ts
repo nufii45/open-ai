@@ -72,6 +72,7 @@ export function useSavedCarePlans() {
     (id: string) => write(getSnapshot().filter((item) => item.id !== id)),
     [],
   );
+  const clear = useCallback(() => write(EMPTY), []);
   const isSaved = useCallback((id: string) => saved.some((item) => item.id === id), [saved]);
-  return { saved, save, remove, isSaved };
+  return { saved, save, remove, clear, isSaved };
 }
