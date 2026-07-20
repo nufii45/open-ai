@@ -27,4 +27,18 @@ describe('twin package gate', () => {
       differences: ['strength: 500 mg vs 250 mg', 'pack quantity: 10 vs 20'],
     });
   });
+
+  it('blocks a different dosage form even when the ingredient and strength match', () => {
+    expect(compareReviewedPacks(pack, { ...pack, dosageForm: 'Capsule' })).toEqual({
+      matches: false,
+      differences: ['form: Tablet vs Capsule'],
+    });
+  });
+
+  it('blocks a different pack count even when every other field matches', () => {
+    expect(compareReviewedPacks(pack, { ...pack, packQuantity: 20 })).toEqual({
+      matches: false,
+      differences: ['pack quantity: 10 vs 20'],
+    });
+  });
 });

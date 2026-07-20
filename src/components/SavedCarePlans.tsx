@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarCheck2, X } from 'lucide-react';
+import { CalendarCheck2, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import type { SavedCarePlan } from '@/lib/careBrief';
@@ -8,9 +8,11 @@ import type { SavedCarePlan } from '@/lib/careBrief';
 export function SavedCarePlans({
   saved,
   onRemove,
+  onClear,
 }: {
   saved: SavedCarePlan[];
   onRemove: (id: string) => void;
+  onClear: () => void;
 }) {
   const reduceMotion = useReducedMotion();
   return (
@@ -28,7 +30,17 @@ export function SavedCarePlans({
           My visit plans
         </h2>
       </div>
-      <p className="mt-1 text-sm leading-6 text-slate-600">Saved only on this device.</p>
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm leading-6 text-slate-600">Saved only on this device.</p>
+        <button
+          type="button"
+          onClick={onClear}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 transition hover:bg-red-50 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700"
+        >
+          <Trash2 className="size-3.5" aria-hidden="true" />
+          Clear local data
+        </button>
+      </div>
       {saved.length === 0 ? (
         <p className="mt-4 border-y border-dashed border-slate-300 py-4 text-center text-sm leading-6 text-slate-600">
           No saved plans yet. Prepare a visit to keep its checklist here.

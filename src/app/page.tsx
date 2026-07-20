@@ -160,7 +160,7 @@ export default function Home() {
   const [preparedVisitNote, setPreparedVisitNote] = useState<VisitNote | null>(null);
   const [step, setStep] = useState(1);
   const [demo, setDemo] = useState<DemoScenario | null>(null);
-  const { saved, save, remove, isSaved } = useSavedCarePlans();
+  const { saved, save, remove, clear, isSaved } = useSavedCarePlans();
   const selected = CARE_JOURNEYS.find((journey) => journey.id === selectedId)!;
   const planId = `${selected.id}:${selectedMedicine?.id ?? 'visit'}`;
   const aiPersonalizedQuestion =
@@ -181,6 +181,19 @@ export default function Home() {
     setDemo(scenario);
     setSelectedId('pharmacy');
     setStep(2);
+  }
+
+  function clearLocalSession() {
+    if (
+      !window.confirm(
+        'Clear saved visit plans and temporary local HealthBridge data from this device?',
+      )
+    )
+      return;
+    clear();
+    window.localStorage.removeItem('healthbridge.saved.v1');
+    window.sessionStorage.clear();
+    window.location.reload();
   }
 
   return (
@@ -518,7 +531,7 @@ export default function Home() {
               }}
               className="lg:sticky lg:top-6"
             >
-              <SavedCarePlans saved={saved} onRemove={remove} />
+              <SavedCarePlans saved={saved} onRemove={remove} onClear={clearLocalSession} />
               <div className="mt-4 hidden rounded-2xl border border-white/70 bg-white/55 p-4 text-xs leading-5 text-slate-500 backdrop-blur lg:block">
                 <p className="font-semibold text-slate-700">Designed for a real conversation</p>
                 <p className="mt-1">

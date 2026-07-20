@@ -758,6 +758,17 @@ export function TwinPackWorkspace({
                   </dl>
                 </div>
               </div>
+              <section className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-900">
+                  What HealthBridge cannot tell you
+                </p>
+                <ul className="mt-2 grid gap-1 text-xs leading-5 text-amber-950 sm:grid-cols-2">
+                  <li>Whether you should switch medicine</li>
+                  <li>What dose you should take</li>
+                  <li>Whether a medicine is right for you</li>
+                  <li>Whether a pharmacy has stock</li>
+                </ul>
+              </section>
               <PharmacistHandoff
                 open={handoffOpen}
                 onClose={() => setHandoffOpen(false)}
