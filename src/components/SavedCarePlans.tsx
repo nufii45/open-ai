@@ -2,7 +2,7 @@
 
 import { CalendarCheck2, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { SavedCarePlan } from '@/lib/careBrief';
 
@@ -17,13 +17,19 @@ export function SavedCarePlans({
 }) {
   const reduceMotion = useReducedMotion();
   const [clearOpen, setClearOpen] = useState(false);
-  const clearDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    const dialog = clearDialogRef.current;
-    if (!dialog) return;
-    if (clearOpen && !dialog.open) dialog.showModal();
-    if (!clearOpen && dialog.open) dialog.close();
+    if (!clearOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setClearOpen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, [clearOpen]);
 
   function closeClearDialog() {
@@ -100,51 +106,74 @@ export function SavedCarePlans({
         )}
       </motion.aside>
 
-      <dialog
-        ref={clearDialogRef}
-        onClose={closeClearDialog}
-        aria-labelledby="clear-local-data-title"
-        className="w-[calc(100%-2rem)] max-w-md rounded-[1.5rem] border border-stone-200 bg-[#fffaf2] p-0 text-slate-950 shadow-2xl backdrop:bg-slate-950/55"
-      >
-        <div className="border-b border-stone-200 bg-[#f0ece4] p-5">
-          <div className="flex items-start gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700">
-              <Trash2 className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
-                Device privacy
-              </p>
-              <h2 id="clear-local-data-title" className="mt-1 text-xl font-bold tracking-tight">
-                Clear local HealthBridge data?
-              </h2>
-            </div>
-          </div>
-        </div>
-        <div className="p-5">
-          <p className="text-sm leading-6 text-slate-600">
-            This removes saved visit plans and temporary browser session data from this device. It
-            cannot be undone, and nothing is deleted from a clinic, pharmacy, or hospital system.
-          </p>
-          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={closeClearDialog}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+      <AnimatePresence>
+        {clearOpen ? (
+          <motion.div
+            role="presentation"
+            initial={reduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reduceMotion ? undefined : { opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18 }}
+            onMouseDown={closeClearDialog}
+            className="fixed inset-0 z-[70] flex items-end bg-slate-950/55 p-3 backdrop-blur-[2px] sm:items-center sm:justify-center sm:p-6"
+          >
+            <motion.section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="clear-local-data-title"
+              initial={reduceMotion ? false : { opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.16, 1, 0.3, 1] }}
+              onMouseDown={(event) => event.stopPropagation()}
+              className="max-h-[calc(100svh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border border-stone-200 bg-[#fffaf2] text-slate-950 shadow-2xl sm:max-h-[calc(100svh-3rem)]"
             >
-              Keep my data
-            </button>
-            <button
-              type="button"
-              onClick={confirmClear}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2"
-            >
-              <Trash2 className="size-4" aria-hidden="true" />
-              Clear local data
-            </button>
-          </div>
-        </div>
-      </dialog>
+              <div className="border-b border-stone-200 bg-[#f0ece4] p-5 sm:p-6">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700">
+                    <Trash2 className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
+                      Device privacy
+                    </p>
+                    <h2
+                      id="clear-local-data-title"
+                      className="mt-1 text-xl font-bold tracking-tight sm:text-2xl"
+                    >
+                      Clear local HealthBridge data?
+                    </h2>
+                  </div>
+                </div>
+              </div>
+              <div className="p-5 sm:p-6">
+                <p className="text-sm leading-6 text-slate-600">
+                  This removes saved visit plans and temporary browser session data from this
+                  device. It cannot be undone, and nothing is deleted from a clinic, pharmacy, or
+                  hospital system.
+                </p>
+                <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={closeClearDialog}
+                    className="inline-flex min-h-12 items-center justify-center rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+                  >
+                    Keep my data
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmClear}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2"
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    Clear local data
+                  </button>
+                </div>
+              </div>
+            </motion.section>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </>
   );
 }
