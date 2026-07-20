@@ -184,12 +184,6 @@ export default function Home() {
   }
 
   function clearLocalSession() {
-    if (
-      !window.confirm(
-        'Clear saved visit plans and temporary local HealthBridge data from this device?',
-      )
-    )
-      return;
     clear();
     window.localStorage.removeItem('healthbridge.saved.v1');
     window.sessionStorage.clear();
