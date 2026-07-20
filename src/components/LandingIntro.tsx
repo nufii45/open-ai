@@ -7,6 +7,7 @@ const INTRO_DURATION_MS = 5_600;
 const INTRO_EXIT_DURATION_MS = 900;
 const MOBILE_INTRO_DURATION_MS = 8_500;
 const MOBILE_EXIT_DURATION_MS = 1_150;
+const REDUCED_MOTION_INTRO_DURATION_MS = 2_500;
 
 export function LandingIntro({ onComplete }: { onComplete: () => void }) {
   const [isExiting, setIsExiting] = useState(false);
@@ -34,7 +35,11 @@ export function LandingIntro({ onComplete }: { onComplete: () => void }) {
     }
     introTimerRef.current = window.setTimeout(
       () => beginExit(reducedMotion, isMobile ? MOBILE_EXIT_DURATION_MS : INTRO_EXIT_DURATION_MS),
-      reducedMotion ? 0 : isMobile ? MOBILE_INTRO_DURATION_MS : INTRO_DURATION_MS,
+      reducedMotion
+        ? REDUCED_MOTION_INTRO_DURATION_MS
+        : isMobile
+          ? MOBILE_INTRO_DURATION_MS
+          : INTRO_DURATION_MS,
     );
     return () => {
       if (introTimerRef.current !== null) window.clearTimeout(introTimerRef.current);
