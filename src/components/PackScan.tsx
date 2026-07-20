@@ -205,6 +205,10 @@ export function PackScan({ onApply }: { onApply: (result: PackScanResult) => voi
               Capture a medicine box or blister pack. HealthBridge turns visible text into editable
               fields; it does not diagnose, prescribe, or recommend a switch.
             </p>
+            <p className="mt-2 max-w-xl text-xs leading-5 text-slate-500">
+              If you choose to scan, the image is sent to our server&apos;s AI service for this
+              extraction request and is not saved by HealthBridge. Manual entry remains available.
+            </p>
           </div>
         </div>
         {imageDataUrl ? (

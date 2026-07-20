@@ -1,5 +1,5 @@
 export const PHILIPPINE_FDA_DRUG_SEARCH_URL =
-  'https://verification.fda.gov.ph/drug_productslist.php';
+  'https://verification.fda.gov.ph/';
 export const OFFICIAL_MEDICINE_SEARCH_DOMAINS = [
   'verification.fda.gov.ph',
   'open.fda.gov',
