@@ -19,6 +19,7 @@ import { PriceImpactCard } from '@/components/PriceImpactCard';
 import { TwinPackWorkspace } from '@/components/TwinPackWorkspace';
 import { AiReferenceWorkspace } from '@/components/AiReferenceWorkspace';
 import type { AiMedicineCandidate } from '@/lib/aiMedicineSearch';
+import type { DemoScenario } from '@/lib/demoPacks';
 import { PHILIPPINE_FDA_DRUG_SEARCH_URL, type RxNormReference } from '@/lib/medicineSources';
 import type { DrugComparison } from '@/lib/types';
 
@@ -67,8 +68,12 @@ function formatPHP(value: number) {
 
 export function MedicineCounterCheck({
   onSelect,
+  demo = null,
+  onExitDemo,
 }: {
   onSelect: (medicine: DrugComparison | null) => void;
+  demo?: DemoScenario | null;
+  onExitDemo?: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<DrugComparison | null>(null);
@@ -311,7 +316,7 @@ export function MedicineCounterCheck({
           </button>
         ))}
       </div>
-      <TwinPackWorkspace />
+      <TwinPackWorkspace key={demo ?? 'live'} demo={demo} onExitDemo={onExitDemo} />
 
       {result ? (
         <>

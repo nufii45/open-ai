@@ -9,6 +9,8 @@ import {
   FlaskConical,
   Hospital,
   Pill,
+  PlayCircle,
+  ShieldAlert,
   ShieldCheck,
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -24,6 +26,7 @@ import { SavedCarePlans } from '@/components/SavedCarePlans';
 import { VisitNoteAssistant } from '@/components/VisitNoteAssistant';
 import { VisitRecommendations } from '@/components/VisitRecommendations';
 import { CARE_JOURNEYS, type CareJourneyId } from '@/lib/careJourneys';
+import type { DemoScenario } from '@/lib/demoPacks';
 import { SAMPLE_PHARMACIES } from '@/lib/pharmacies';
 import type { DrugComparison } from '@/lib/types';
 import { useSavedCarePlans } from '@/lib/useSavedCarePlans';
@@ -156,6 +159,7 @@ export default function Home() {
   const [selectedMedicine, setSelectedMedicine] = useState<DrugComparison | null>(null);
   const [preparedVisitNote, setPreparedVisitNote] = useState<VisitNote | null>(null);
   const [step, setStep] = useState(1);
+  const [demo, setDemo] = useState<DemoScenario | null>(null);
   const { saved, save, remove, isSaved } = useSavedCarePlans();
   const selected = CARE_JOURNEYS.find((journey) => journey.id === selectedId)!;
   const planId = `${selected.id}:${selectedMedicine?.id ?? 'visit'}`;
@@ -170,6 +174,13 @@ export default function Home() {
     setSelectedId(id);
     setSelectedMedicine(null);
     setPreparedVisitNote(null);
+  }
+
+  // Drops a judge straight into the pharmacy comparison with local seeded packs.
+  function startDemo(scenario: DemoScenario) {
+    setDemo(scenario);
+    setSelectedId('pharmacy');
+    setStep(2);
   }
 
   return (
@@ -199,9 +210,14 @@ export default function Home() {
                 <p className="text-xs text-slate-500">Care visit preparation</p>
               </div>
             </div>
-            <p className="hidden rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur sm:block">
-              Built for thoughtful choices
-            </p>
+            <button
+              type="button"
+              onClick={() => startDemo('match')}
+              className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-slate-300 bg-white/90 px-3 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur transition hover:border-teal-400 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+            >
+              <PlayCircle className="size-4" aria-hidden="true" />
+              Try the demo
+            </button>
           </motion.header>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
@@ -258,10 +274,30 @@ export default function Home() {
                         {hero.detail}
                       </p>
                     </div>
+                    {step === 1 ? (
+                      <div className="mt-5 flex flex-wrap gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => startDemo('match')}
+                          className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-teal-300 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-teal-300/20 transition hover:-translate-y-0.5 hover:bg-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                        >
+                          <PlayCircle className="size-5" aria-hidden="true" />
+                          Try the demo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => startDemo('mismatch')}
+                          className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                        >
+                          <ShieldAlert className="size-5" aria-hidden="true" />
+                          See a blocked comparison
+                        </button>
+                      </div>
+                    ) : null}
                     <div className="mt-6 flex items-center justify-between gap-3">
                       <span className="inline-flex items-center gap-2 text-xs font-medium text-slate-300">
                         <span className="size-2 rounded-full bg-teal-300 shadow-[0_0_0_5px_rgb(94_234_212/0.1)]" />
-                        Private by default
+                        {demo ? 'Local demo data · no network' : 'Private by default'}
                       </span>
                       <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-teal-100">
                         Step {step} of {STEPS.length}
@@ -364,7 +400,11 @@ export default function Home() {
                   {step === 2 ? (
                     <section>
                       {selected.id === 'pharmacy' ? (
-                        <MedicineCounterCheck onSelect={setSelectedMedicine} />
+                        <MedicineCounterCheck
+                          onSelect={setSelectedMedicine}
+                          demo={demo}
+                          onExitDemo={() => setDemo(null)}
+                        />
                       ) : (
                         <section className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm backdrop-blur sm:p-6">
                           <div className="flex items-start gap-3">

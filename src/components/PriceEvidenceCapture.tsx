@@ -14,8 +14,10 @@ function formatPHP(value: number) {
 
 export function PriceEvidenceCapture({
   onApply,
+  onFailure,
 }: {
   onApply: (kind: PriceKind, price: number) => void;
+  onFailure?: (kind: PriceKind) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [target, setTarget] = useState<PriceKind>('branded');
@@ -54,14 +56,18 @@ export function PriceEvidenceCapture({
           throw new Error(data.error ?? 'We could not read the price label.');
         setResult(data.result);
         setPhase('ready');
+        // No usable PHP amount: send the user straight to the manual field.
+        if (!data.result.price || data.result.currency !== 'PHP') onFailure?.(target);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'We could not read the price label.');
         setPhase('error');
+        onFailure?.(target);
       }
     };
     reader.onerror = () => {
       setError('We could not read this image.');
       setPhase('error');
+      onFailure?.(target);
     };
     reader.readAsDataURL(file);
   }
@@ -97,6 +103,9 @@ export function PriceEvidenceCapture({
           <p className="mt-1 text-xs leading-5 text-slate-600">
             Use a shelf tag or receipt to prefill a visible Philippine peso price. You review it
             before it is used; the photo is not saved.
+          </p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-slate-700">
+            Manual entry works without AI — the price fields above always accept a typed amount.
           </p>
         </div>
       </div>
